@@ -10,6 +10,11 @@
 			"id": 1,
 			"skinName": "freakin sweet",
 			"folderName": "RatNation"
+		},
+		{
+			"id": 2,
+			"skinName": "addingTest",
+			"folderName": "TestRandom"
 		}
     ]
 }

@@ -7,17 +7,60 @@ public class Card : MonoBehaviour
     public Sprite[] cardSprites; //0 purple,1 green, 2 blue, yellow
     SpriteRenderer spriteRenderer;
 
-    public void Init(cardColor sideOne, cardColor sideTwo, Sprite[] cardSprites)
+    public void Init(cardColor sideOne, cardColor sideTwo, Sprite[] newCardSprites)
     {
         colors[0] = sideOne;
         colors[1] = sideTwo;
 
-        this.cardSprites = cardSprites;
+        cardSprites = newCardSprites;
+
+        spriteRenderer = GetComponent<SpriteRenderer>();
+
+        updateGraphics();
     }
 
-    public void changeSprites(Sprite[] cardSprites)
+    private void updateGraphics()
     {
-        this.cardSprites = cardSprites;
+        spriteRenderer = GetComponent<SpriteRenderer>();
+
+        switch (colors[0])
+        {
+            case (cardColor.purple):
+                spriteRenderer.sprite = cardSprites[0];
+                break;
+            case (cardColor.green):
+                spriteRenderer.sprite = cardSprites[1];
+                break;
+            case (cardColor.blue):
+                spriteRenderer.sprite = cardSprites[2];
+                break;
+            case (cardColor.yellow):
+                spriteRenderer.sprite= cardSprites[3];
+                break;
+        }
+    }
+
+    public void changeSprites(Sprite[] newCardSprites)
+    {
+        this.cardSprites = newCardSprites;
+
+        switch (colors[0])
+        {
+            case(cardColor.purple):
+                cardSprites[0] = newCardSprites[0];
+                break;
+            case(cardColor.green):
+                cardSprites[1] = newCardSprites[1];
+                break;
+            case(cardColor.blue):
+                cardSprites[2] = newCardSprites[2];
+                break;
+            case(cardColor.yellow):
+                cardSprites[3] = newCardSprites[3];
+                break;
+        }
+
+        updateGraphics();
     }
 
 }

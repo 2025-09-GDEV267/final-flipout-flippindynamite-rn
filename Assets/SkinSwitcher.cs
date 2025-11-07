@@ -1,5 +1,5 @@
+using System;
 using System.Collections.Generic;
-using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,14 +9,16 @@ public class SkinSwitcher : MonoBehaviour
     List<string> optionsToAdd = new List<string>();
 
     public TextAsset textJSON;
-    private string filePath = "Resources\\CardSets\\";
+    private string filePath = "CardSets\\";
     private string skinFolder = "Default";
     private string filePathBlue = "\\CardPNGS\\CardBlue";
     private string filePathGreen = "\\CardPNGS\\CardGreen";
     private string filePathPurple = "\\CardPNGS\\CardPurple";
     private string filePathYellow = "\\CardPNGS\\CardYellow";
 
-    public Deck gameDeck;
+    public List<Card> gameDeck;
+
+    public GameObject cardPrefab;
 
     public TMP_Dropdown dropdown;
     [System.Serializable]
@@ -47,12 +49,34 @@ public class SkinSwitcher : MonoBehaviour
 
         dropdown.AddOptions(optionsToAdd);
 
-        onDropDownUpdate(1);
+        onDropDownUpdate(0);
+
+        initTestCard();
+    }
+    void initTestCard()
+    {
+        Sprite blueCard = changeSprite(filePathBlue);
+        Sprite greenCard = changeSprite(filePathGreen);
+        Sprite yellowCard = changeSprite(filePathYellow);
+        Sprite purpleCard = changeSprite(filePathPurple);
+
+        Sprite[] sprites = { purpleCard, greenCard, blueCard, yellowCard };
+
+        Array allPossibleColors = Enum.GetValues(typeof(cardColor));
+
+        int randomOne = UnityEngine.Random.Range(0, allPossibleColors.Length);
+
+        int randomTwo = UnityEngine.Random.Range(0, allPossibleColors.Length);
+
+        GameObject newCard = GameObject.Instantiate(cardPrefab,new Vector3(0,0,0),Quaternion.identity);
+
+        newCard.GetComponent<Card>().Init((cardColor)allPossibleColors.GetValue(randomOne), (cardColor)allPossibleColors.GetValue(randomTwo), sprites);
+
+        gameDeck.Add(newCard.GetComponent<Card>());
     }
 
     public void onDropDownUpdate(int selection)
     {
-
         bool success = false;
 
         foreach (var cardSkins in mySkinsList.cardSkins)
@@ -71,15 +95,21 @@ public class SkinSwitcher : MonoBehaviour
             Sprite yellowCard = changeSprite(filePathYellow);
             Sprite purpleCard = changeSprite(filePathPurple);
 
-            gameDeck.updateCards(purpleCard,greenCard,blueCard,yellowCard);
+            Sprite[] sprites = { purpleCard, greenCard, blueCard, yellowCard };
+
+            foreach (var cards in gameDeck)
+            {
+                cards.changeSprites(sprites);
+            }
         }
     }
 
     private Sprite changeSprite(string dir)
     {
         string newFilePath = filePath + skinFolder + dir;
-       
-        return Resources.Load<Sprite>(newFilePath); ;
+        Debug.Log(newFilePath);
+        Debug.Log(Resources.Load<Sprite>(newFilePath));
+        return Resources.Load<Sprite>(newFilePath);
     }
 
 
