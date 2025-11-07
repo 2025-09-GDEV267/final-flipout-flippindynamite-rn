@@ -1,0 +1,15 @@
+{
+    "cardSkins": 
+	[
+        {
+			"id": 0,
+			"skinName": "boring",
+			"folderName": "Default"
+        },
+		{
+			"id": 1,
+			"skinName": "freakin sweet",
+			"folderName": "RatNation"
+		}
+    ]
+}
