@@ -23,6 +23,8 @@ public class Card : MonoBehaviour
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
 
+        cardSprites = GameObject.FindGameObjectWithTag("CosMan").GetComponent<SkinSwitcher>().getSkin();
+
         switch (colors[0])
         {
             case (cardColor.purple):
@@ -38,29 +40,6 @@ public class Card : MonoBehaviour
                 spriteRenderer.sprite= cardSprites[3];
                 break;
         }
-    }
-
-    public void changeSprites(Sprite[] newCardSprites)
-    {
-        this.cardSprites = newCardSprites;
-
-        switch (colors[0])
-        {
-            case(cardColor.purple):
-                cardSprites[0] = newCardSprites[0];
-                break;
-            case(cardColor.green):
-                cardSprites[1] = newCardSprites[1];
-                break;
-            case(cardColor.blue):
-                cardSprites[2] = newCardSprites[2];
-                break;
-            case(cardColor.yellow):
-                cardSprites[3] = newCardSprites[3];
-                break;
-        }
-
-        updateGraphics();
     }
 
 }

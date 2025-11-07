@@ -16,9 +16,7 @@ public class SkinSwitcher : MonoBehaviour
     private string filePathPurple = "\\CardPNGS\\CardPurple";
     private string filePathYellow = "\\CardPNGS\\CardYellow";
 
-    public List<Card> gameDeck;
-
-    public GameObject cardPrefab;
+    Sprite[] currentSprites;
 
     public TMP_Dropdown dropdown;
     [System.Serializable]
@@ -50,10 +48,8 @@ public class SkinSwitcher : MonoBehaviour
         dropdown.AddOptions(optionsToAdd);
 
         onDropDownUpdate(0);
-
-        initTestCard();
     }
-    void initTestCard()
+    /*void initTestCard()
     {
         Sprite blueCard = changeSprite(filePathBlue);
         Sprite greenCard = changeSprite(filePathGreen);
@@ -73,7 +69,7 @@ public class SkinSwitcher : MonoBehaviour
         newCard.GetComponent<Card>().Init((cardColor)allPossibleColors.GetValue(randomOne), (cardColor)allPossibleColors.GetValue(randomTwo), sprites);
 
         gameDeck.Add(newCard.GetComponent<Card>());
-    }
+    }*/
 
     public void onDropDownUpdate(int selection)
     {
@@ -95,12 +91,7 @@ public class SkinSwitcher : MonoBehaviour
             Sprite yellowCard = changeSprite(filePathYellow);
             Sprite purpleCard = changeSprite(filePathPurple);
 
-            Sprite[] sprites = { purpleCard, greenCard, blueCard, yellowCard };
-
-            foreach (var cards in gameDeck)
-            {
-                cards.changeSprites(sprites);
-            }
+            currentSprites = new Sprite[]{ purpleCard, greenCard, blueCard, yellowCard };
         }
     }
 
@@ -112,5 +103,8 @@ public class SkinSwitcher : MonoBehaviour
         return Resources.Load<Sprite>(newFilePath);
     }
 
-
+    public Sprite[] getSkin()
+    {
+        return currentSprites;
+    }
 }
