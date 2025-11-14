@@ -16,6 +16,7 @@ public class SkinSwitcher : MonoBehaviour
     private string filePathPurple = "\\CardPNGS\\CardPurple";
     private string filePathYellow = "\\CardPNGS\\CardYellow";
 
+    [SerializeField]
     Sprite[] currentSprites;
 
     public TMP_Dropdown dropdown;
@@ -34,7 +35,7 @@ public class SkinSwitcher : MonoBehaviour
 
     public SkinsList mySkinsList;
 
-    private void Start()
+    private void Awake()
     {
         mySkinsList = JsonUtility.FromJson<SkinsList>(textJSON.text);
 
@@ -91,8 +92,9 @@ public class SkinSwitcher : MonoBehaviour
             Sprite yellowCard = changeSprite(filePathYellow);
             Sprite purpleCard = changeSprite(filePathPurple);
 
-            currentSprites = new Sprite[]{ purpleCard, greenCard, blueCard, yellowCard };
+            currentSprites = new Sprite[]{ purpleCard, greenCard, blueCard, yellowCard};
         }
+
     }
 
     private Sprite changeSprite(string dir)
@@ -103,6 +105,7 @@ public class SkinSwitcher : MonoBehaviour
         return Resources.Load<Sprite>(newFilePath);
     }
 
+    [SerializeField]
     public Sprite[] getSkin()
     {
         return currentSprites;

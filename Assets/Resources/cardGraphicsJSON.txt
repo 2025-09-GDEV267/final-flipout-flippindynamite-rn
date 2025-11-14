@@ -15,6 +15,11 @@
 			"id": 2,
 			"skinName": "addingTest",
 			"folderName": "TestRandom"
+		},
+		{
+			"id": 3,
+			"skinName": "KatieCard",
+			"folderName": "KatieCards"
 		}
     ]
 }

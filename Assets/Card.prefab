@@ -9,8 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2236880962724571313}
-  - component: {fileID: 6220311327918949354}
-  - component: {fileID: 8956423779468409185}
+  - component: {fileID: -3540168934251368906}
+  - component: {fileID: 8383617058227356455}
+  - component: {fileID: 9204900869388354123}
   m_Layer: 0
   m_Name: Card
   m_TagString: Untagged
@@ -27,13 +28,55 @@ Transform:
   m_GameObject: {fileID: 7452514571912191909}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -2.46, y: 0.9, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.15, y: 0.15, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &6220311327918949354
+--- !u!114 &-3540168934251368906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7452514571912191909}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 114552283
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &8383617058227356455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7452514571912191909}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea621d2d3c7d94145932329b68a8894f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  colorOne:
+    m_InternalValue: 0
+  colorTwo:
+    m_InternalValue: 0
+--- !u!212 &9204900869388354123
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -77,32 +120,14 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: -2783245508818007376, guid: f06f1d3d60926dd40894b0574650772f, type: 3}
+  m_Sprite: {fileID: -2783245508818007376, guid: 4b299a7b30a8deb499642a62dccba388, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1.5, y: 2.2505496}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &8956423779468409185
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7452514571912191909}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea621d2d3c7d94145932329b68a8894f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  colors: 0000000001000000
-  cardSprites:
-  - {fileID: 9013656592470760534, guid: 71cceab7af646c2488730785863d145f, type: 3}
-  - {fileID: 3277218921016945396, guid: e8d5817aa167575459e5db309bc2ed96, type: 3}
-  - {fileID: -2783245508818007376, guid: 4b299a7b30a8deb499642a62dccba388, type: 3}
-  - {fileID: 2298909097248338936, guid: 95aeb3be6c714de438fcbfec6cbf0cf5, type: 3}

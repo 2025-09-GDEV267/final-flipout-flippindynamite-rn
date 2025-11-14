@@ -1,31 +1,44 @@
+using Unity.Netcode;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public enum cardColor {purple,green,blue,yellow}
-public class Card : MonoBehaviour
+public class Card : NetworkBehaviour
 {
-    public cardColor[] colors;
-    public Sprite[] cardSprites; //0 purple,1 green, 2 blue, yellow
     SpriteRenderer spriteRenderer;
 
-    public void Init(cardColor sideOne, cardColor sideTwo, Sprite[] newCardSprites)
+    public NetworkVariable<cardColor> colorOne = new NetworkVariable<cardColor>();
+    public NetworkVariable<cardColor> colorTwo = new NetworkVariable<cardColor>();
+
+    [ClientRpc]
+    public void SetClientRpc(cardColor sideOne, cardColor sideTwo)
     {
-        colors[0] = sideOne;
-        colors[1] = sideTwo;
-
-        cardSprites = newCardSprites;
-
-        spriteRenderer = GetComponent<SpriteRenderer>();
+        //if (IsServer)
+        //{
+            colorOne.Value = sideOne;
+            colorTwo.Value = sideTwo;
+       // }
 
         updateGraphics();
     }
+   private void OnColorOneChanged(cardColor oldValue, cardColor newValue)
+    {
+        updateGraphics();
+    }
 
-    private void updateGraphics()
+    private void OnColorTwoChanged(cardColor oldValue, cardColor newValue)
+    {
+        updateGraphics();
+    }
+    public void updateGraphics()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
 
-        cardSprites = GameObject.FindGameObjectWithTag("CosMan").GetComponent<SkinSwitcher>().getSkin();
+        Sprite[] cardSprites = GameObject.FindGameObjectWithTag("CosMan").GetComponent<SkinSwitcher>().getSkin();
 
-        switch (colors[0])
+        Debug.Log(cardSprites.IsUnityNull());
+
+        switch (colorOne.Value)
         {
             case (cardColor.purple):
                 spriteRenderer.sprite = cardSprites[0];
@@ -37,10 +50,9 @@ public class Card : MonoBehaviour
                 spriteRenderer.sprite = cardSprites[2];
                 break;
             case (cardColor.yellow):
-                spriteRenderer.sprite= cardSprites[3];
+                spriteRenderer.sprite = cardSprites[3];
                 break;
         }
     }
-
 }
 
