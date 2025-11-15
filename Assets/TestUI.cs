@@ -17,9 +17,9 @@ public class TestUI : NetworkBehaviour
 
         if (script != null)
         {
-            if(!script.randomValues.Value.colorOne.Equals(null))
+            if(!script.cardValue.Value.colorOne.Equals(null))
             //updates text to show the values as they change on the server side
-            text.text = "ColorOne = " + script.randomValues.Value.colorOne + ", ColorTwo = " + script.randomValues.Value.colorTwo + "ColorShownToOwner = " + script.randomValues.Value.ColorVisibleToOwner;
+            text.text = "ColorOne = " + script.cardValue.Value.colorOne + ", ColorTwo = " + script.cardValue.Value.colorTwo + "ColorShownToOwner = " + script.cardValue.Value.ColorVisibleToOwner;
         }
     }
 }

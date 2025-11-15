@@ -21,9 +21,8 @@ public class ServerScript : NetworkBehaviour
     }
 
     //Makes a new NetworkVarible of type Card (see def) called randomValues and then sets the read perms to everyone and the writing perms to only the server
-
     //See this link for what can be NetworkVariables https://docs.unity3d.com/Packages/com.unity.netcode.gameobjects@2.7/manual/serialization.html
-    public NetworkVariable<Card> randomValues = new NetworkVariable<Card>(
+    public NetworkVariable<Card> cardValue = new NetworkVariable<Card>(
         new Card
         {
             //sets default values
@@ -39,7 +38,7 @@ public class ServerScript : NetworkBehaviour
     //We make a struct instead of a Class because a class is a reference type i ~think~ either way if we're storing a bunch of values this is how
     public struct Card : INetworkSerializable
     {
-        //0 Blue,1 Purple,2 Green, 3 Yellow 
+        //0 Blue,1 Purple,2 Green, 3 Yellow, 4 Red
         public int colorOne;
         public int colorTwo;
         //Between 0-1 (0 for side One, and 1 for side Two)
@@ -58,9 +57,13 @@ public class ServerScript : NetworkBehaviour
     {
         //uses a Lamda operator to add further methods to the OnValueChanged method
         //(I tried to edit it to prevent values from being changed outside their limits, edited them out cause i couldnt figure it out)
-        randomValues.OnValueChanged += (Card previousValue, Card newValue) =>
+        cardValue.OnValueChanged += (Card previousValue, Card newValue) =>
         {
-           /* if (newValue.colorOne > 3 || newValue.colorOne < 0)
+           /*
+            * I tried placing a clamping method in this code so the server has stricter control on the changing of
+            * values. shelved for now for sake of simplicity
+            * 
+            * if (newValue.colorOne > 3 || newValue.colorOne < 0)
             {
                 newValue.colorOne = previousValue.colorOne;
             }
@@ -95,7 +98,7 @@ public class ServerScript : NetworkBehaviour
     //Updates the NetWorkValue randomValues 
     private void updateValues()
     {
-        randomValues.Value = new Card { colorOne = Random.Range(0, 4), colorTwo = Random.Range(0, 4), ColorVisibleToOwner = Random.Range(0, 2) };
+        cardValue.Value = new Card { colorOne = Random.Range(0, 5), colorTwo = Random.Range(0, 5), ColorVisibleToOwner = Random.Range(0, 2) };
         latch = false;
     }
 }

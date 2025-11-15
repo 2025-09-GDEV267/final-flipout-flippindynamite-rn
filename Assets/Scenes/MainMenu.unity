@@ -289,7 +289,7 @@ MonoBehaviour:
   NetworkConfig:
     ProtocolVersion: 0
     NetworkTransport: {fileID: 28539214}
-    PlayerPrefab: {fileID: 3889365595070718790, guid: f3083fca8fcc27943b397d0aa10563b9, type: 3}
+    PlayerPrefab: {fileID: 8531021026402380694, guid: a0a9ba66b839dbf4b815ec525f94f39f, type: 3}
     Prefabs:
       NetworkPrefabsLists:
       - {fileID: 11400000, guid: b44f9a08adc440b40b46a6b82f82de77, type: 2}
@@ -1344,6 +1344,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  latch: 0
 --- !u!4 &899356921
 Transform:
   m_ObjectHideFlags: 0
