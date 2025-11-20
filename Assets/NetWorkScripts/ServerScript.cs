@@ -12,7 +12,6 @@ public class ServerScript : NetworkBehaviour
 
     // Establishes a Singleton
     public static ServerScript instance;
-    
     // Could we do this in the OnNetworkSpawn()
     private void Awake()
     {
@@ -28,6 +27,7 @@ public class ServerScript : NetworkBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    public NetworkVariable<string> textLog = new NetworkVariable<string>("Hewwo Wowd", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     //Makes a new NetworkVarible of type Card (see def) called randomValues and then sets the read perms to everyone and the writing perms to only the server
     //See this link for what can be NetworkVariables https://docs.unity3d.com/Packages/com.unity.netcode.gameobjects@2.7/manual/serialization.html
     public NetworkVariable<Card> cardValue = new NetworkVariable<Card>(
@@ -44,7 +44,7 @@ public class ServerScript : NetworkBehaviour
 
     //CardDeck Initialization
     //creates a new Card struct that extends INetworkSerializable
-    
+
     //We make a struct instead of a Class because a class is a reference type i ~think~ either way if we're storing a bunch of values this is how
     public struct Card : INetworkSerializable, IEquatable<Card>
     {
