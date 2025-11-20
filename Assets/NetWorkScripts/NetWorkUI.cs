@@ -20,14 +20,15 @@ public class NetWorkUI : NetworkBehaviour
      */
     public void startHost()
     {
-        
+        networkManager = NetworkManager.Singleton;
         networkManager.GetComponent<UnityTransport>().ConnectionData.Address = inputField.text;
         networkManager.StartHost();
-        if(!IsClient) networkManager.SceneManager.LoadScene(gameScene, LoadSceneMode.Single);
+        if(IsServer) networkManager.SceneManager.LoadScene(gameScene, LoadSceneMode.Single);
     }
     // Sets IP to inputField and starts client
     public void startClient()
     {
+        networkManager = NetworkManager.Singleton;
         networkManager.GetComponent<UnityTransport>().ConnectionData.Address = inputField.text;
         networkManager.StartClient();
     }

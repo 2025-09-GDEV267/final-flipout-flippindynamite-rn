@@ -8,6 +8,7 @@ using System;
 public class ServerScript : NetworkBehaviour
 {
     public NetworkList<Card> NetworkDeck;
+    public NetworkList<player> PlayerList;
 
     // Establishes a Singleton
     public static ServerScript instance;
@@ -22,6 +23,7 @@ public class ServerScript : NetworkBehaviour
         }
 
         NetworkDeck = new NetworkList<Card>();
+        PlayerList = new NetworkList<player>();
         instance = this;
         DontDestroyOnLoad(gameObject);
     }
@@ -35,13 +37,12 @@ public class ServerScript : NetworkBehaviour
             colorOne = 0,
             colorTwo = 1,
             ColorVisibleToOwner = 0,
+            
         },
         //sets var perms
         NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     //CardDeck Initialization
-
-
     //creates a new Card struct that extends INetworkSerializable
     
     //We make a struct instead of a Class because a class is a reference type i ~think~ either way if we're storing a bunch of values this is how
@@ -52,6 +53,7 @@ public class ServerScript : NetworkBehaviour
         public int colorTwo;
         //Between 0-1 (0 for side One, and 1 for side Two)
         public int ColorVisibleToOwner;
+        public int cardId;
         
         //idk why we do this but just make sure you do this whenever you make a struct (we can figure out why later)
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
@@ -59,38 +61,75 @@ public class ServerScript : NetworkBehaviour
             serializer.SerializeValue(ref colorOne);
             serializer.SerializeValue(ref colorTwo);
             serializer.SerializeValue(ref ColorVisibleToOwner);
+            serializer.SerializeValue(ref cardId);
         }
         public bool Equals(Card other)
         {
             return colorOne == other.colorOne &&
                    colorTwo == other.colorTwo &&
-                   ColorVisibleToOwner == other.ColorVisibleToOwner;
+                   ColorVisibleToOwner == other.ColorVisibleToOwner &&
+                   cardId == other.cardId;
         }
     }
     //0 Blue,1 Purple,2 Green, 3 Yellow, 4 Red
     public Card[] deckCardRange = new Card[15]
     {
-        new() {colorOne = 4, colorTwo = 4, ColorVisibleToOwner = 0},
-        new() {colorOne = 4, colorTwo = 2, ColorVisibleToOwner = 0},
-        new() {colorOne = 4, colorTwo = 0, ColorVisibleToOwner = 0},
-        new() {colorOne = 4, colorTwo = 1, ColorVisibleToOwner = 0},
-        new() {colorOne = 4, colorTwo = 3, ColorVisibleToOwner = 0},
+        new() {colorOne = 4, colorTwo = 4, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 4, colorTwo = 2, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 4, colorTwo = 0, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 4, colorTwo = 1, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 4, colorTwo = 3, ColorVisibleToOwner = 0, cardId = 0},
 
-        new() {colorOne = 2, colorTwo = 2, ColorVisibleToOwner = 0},
-        new() {colorOne = 2, colorTwo = 0, ColorVisibleToOwner = 0},
-        new() {colorOne = 2, colorTwo = 1, ColorVisibleToOwner = 0},
-        new() {colorOne = 2, colorTwo = 3, ColorVisibleToOwner = 0},
+        new() {colorOne = 2, colorTwo = 2, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 2, colorTwo = 0, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 2, colorTwo = 1, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 2, colorTwo = 3, ColorVisibleToOwner = 0, cardId = 0},
 
-        new() {colorOne = 0, colorTwo = 0, ColorVisibleToOwner = 0},
-        new() {colorOne = 0, colorTwo = 1, ColorVisibleToOwner = 0},
-        new() {colorOne = 0, colorTwo = 3, ColorVisibleToOwner = 0},
+        new() {colorOne = 0, colorTwo = 0, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 0, colorTwo = 1, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 0, colorTwo = 3, ColorVisibleToOwner = 0, cardId = 0},
 
-        new() {colorOne = 1, colorTwo = 1, ColorVisibleToOwner = 0},
-        new() {colorOne = 1, colorTwo = 3, ColorVisibleToOwner = 0},
+        new() {colorOne = 1, colorTwo = 1, ColorVisibleToOwner = 0, cardId = 0},
+        new() {colorOne = 1, colorTwo = 3, ColorVisibleToOwner = 0, cardId = 0},
 
-        new() {colorOne = 3, colorTwo = 3, ColorVisibleToOwner = 0}
+        new() {colorOne = 3, colorTwo = 3, ColorVisibleToOwner = 0, cardId = 0}
     };
 
+    public struct player : INetworkSerializable, IEquatable<player>
+    {
+        public ulong id;
+        public int PlayerCount;
+        public int cardOneIDs;
+        public int cardTwoIDs;
+        public int cardThreeIDs;
+        public int cardFourIDs;
+        public int cardFiveIDs;
+        public int cardSixIDs;
+
+
+        public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+        {
+            serializer.SerializeValue(ref id);
+            serializer.SerializeValue(ref PlayerCount);
+            serializer.SerializeValue(ref cardOneIDs);
+            serializer.SerializeValue(ref cardTwoIDs);
+            serializer.SerializeValue(ref cardThreeIDs);
+            serializer.SerializeValue(ref cardFourIDs);
+            serializer.SerializeValue(ref cardFiveIDs);
+            serializer.SerializeValue(ref cardSixIDs);
+        }
+        public bool Equals(player other)
+        {
+            return id == other.id &&
+                PlayerCount == other.PlayerCount &&
+                   cardOneIDs == other.cardOneIDs &&
+                   cardTwoIDs == other.cardTwoIDs &&
+                   cardThreeIDs == other.cardThreeIDs &&
+                   cardFourIDs == other.cardFourIDs &&
+                   cardFiveIDs == other.cardFiveIDs &&
+                   cardSixIDs == other.cardSixIDs;
+        }
+    }
 
     //Overrides the OnNetworkSpawn and adds debug log changes to the OnValueChanged method
     public override void OnNetworkSpawn()
@@ -145,7 +184,35 @@ public class ServerScript : NetworkBehaviour
         cardValue.Value = NetworkDeck[UnityEngine.Random.Range(0,NetworkDeck.Count)];
         latch = false;
     }
+    private void OnClientConnected(ulong clientId)
+    {
+        if (!IsServer) return;
 
+        player newPlayer = new player
+        {
+            id = clientId,
+            PlayerCount = PlayerList.Count + 1,
+            cardOneIDs = NetworkDeck[UnityEngine.Random.Range(0,NetworkDeck.Count)].cardId,
+            cardTwoIDs = NetworkDeck[UnityEngine.Random.Range(0, NetworkDeck.Count)].cardId,
+            cardThreeIDs = NetworkDeck[UnityEngine.Random.Range(0, NetworkDeck.Count)].cardId,
+            cardFourIDs = NetworkDeck[UnityEngine.Random.Range(0, NetworkDeck.Count)].cardId,
+            cardFiveIDs = NetworkDeck[UnityEngine.Random.Range(0, NetworkDeck.Count)].cardId,
+            cardSixIDs = NetworkDeck[UnityEngine.Random.Range(0, NetworkDeck.Count)].cardId
+        };
+
+        PlayerList.Add(newPlayer);
+    }
+    public player getMyPlayer(ulong id)
+    {
+        foreach (player play in PlayerList)
+        {
+            if (play.id.Equals(id))
+            {
+                return play;
+            }
+        }
+        return new player { };
+    }
     public void creatDeck()
     {
         if (!IsServer) return;
@@ -166,6 +233,8 @@ public class ServerScript : NetworkBehaviour
 
         for (int i = 0; i < deck.Length; i++)
         {
+            deck[i].cardId = i;
+            deck[i].ColorVisibleToOwner = 0;
             NetworkDeck.Add(deck[i]);
         }
     }
