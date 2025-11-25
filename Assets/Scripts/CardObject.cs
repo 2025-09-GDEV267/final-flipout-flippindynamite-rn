@@ -3,6 +3,9 @@ using UnityEngine;
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(BoxCollider2D))]
 [System.Serializable]
+
+
+
 public class CardObject : MonoBehaviour
 {
     public CardSpritesSO cardSpritesSO;
@@ -164,4 +167,16 @@ public class CardObject : MonoBehaviour
         gameObject.transform.localPosition = pos;
     }
 
+    public static event System.Action<CardObject> OnHoverEnter;
+    public static event System.Action<CardObject> OnHoverExit;
+
+    private void OnMouseEnter()
+    {
+    OnHoverEnter?.Invoke(this);
+    }
+
+    private void OnMouseExit()
+    {
+    OnHoverExit?.Invoke(this);
+    }
 }
