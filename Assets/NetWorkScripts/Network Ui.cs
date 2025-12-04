@@ -5,7 +5,7 @@ using Unity.Netcode.Transports.UTP;
 using UnityEngine.SceneManagement;
 using UnityEditor;
 
-public class NetWorkUI : MonoBehaviour
+public class NetWorkUi : NetworkBehaviour
 {
     [SerializeField]
     TMP_InputField inputField;
@@ -20,13 +20,15 @@ public class NetWorkUI : MonoBehaviour
      */
     public void startHost()
     {
+        networkManager = NetworkManager.Singleton;
         networkManager.GetComponent<UnityTransport>().ConnectionData.Address = inputField.text;
         networkManager.StartHost();
-        networkManager.SceneManager.LoadScene(gameScene, LoadSceneMode.Single);
+        if (IsServer) networkManager.SceneManager.LoadScene(gameScene, LoadSceneMode.Single);
     }
     // Sets IP to inputField and starts client
     public void startClient()
     {
+        networkManager = NetworkManager.Singleton;
         networkManager.GetComponent<UnityTransport>().ConnectionData.Address = inputField.text;
         networkManager.StartClient();
     }
