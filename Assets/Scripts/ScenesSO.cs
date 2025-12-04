@@ -11,4 +11,5 @@ public class ScenesSO : ScriptableObject
     public string gameOverScene;
     //public string creditsScene;
     public string DCExperimentsScene;
+    public string UITestScene;
 }

@@ -13,7 +13,8 @@ public enum Scenes
     MainMenu,
     Game,
     GameOver,
-    DCExperiments
+    DCExperiments,
+    UITest
 }
 
 // AppState ? (avoids collision with GameState script)
@@ -162,6 +163,11 @@ public class GameManager : MonoBehaviour
                 currentScene = Scenes.Game; // !!
                 currentGameState = GameState.Playing;
                 break;
+            case Scenes.UITest:
+                LoadScene(scenesSO.UITestScene);
+                currentScene = Scenes.UITest;
+                currentGameState = GameState.Playing;
+                break;
             default:
                 Debug.LogError("Unknown scene: " + scene);
                 break;
@@ -207,6 +213,15 @@ public class GameManager : MonoBehaviour
                 currentGameState = GameState.Playing;
             }
         }
+        else if (activeSceneName == scenesSO.UITestScene)
+        {
+            if (currentScene != Scenes.UITest)
+            {
+                Debug.Log("currentScene mismatch; currentScene set to " + currentScene.ToString() + "; updating to " + Scenes.UITest.ToString());
+                currentScene = Scenes.Game; // !!
+                currentGameState = GameState.Playing;
+            }
+        }
         else
         {
             Debug.LogWarning("Active scene does not match any known scenes in ScenesSO: " + activeSceneName);
@@ -247,6 +262,10 @@ public class GameManager : MonoBehaviour
                 //StartHotseatGame(2, new string[] { Environment.UserName, "Player2" });
                 StartHotseatGame(2, new string[] { "PlayerUNO", "Player2" });
             }
+        }
+        if (currentScene == Scenes.UITest)
+        {
+            StartUITestGame();
         }
     }
 
@@ -580,13 +599,18 @@ public class GameManager : MonoBehaviour
             //DrawPileDisplayTopCard();
             cardsShowing = true;
         }
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            StartUITestGame();
+            
+        }
     }
 
 
     // Called when a card is clicked - responds based on player turn, action, etc.
     void OnCardClicked(CardObject card)
     {
-        AudioManager.PlaySoundAt(AudioManager.audioSourcesSO.clickCard, 1f);
+        AudioManager.PlaySoundAt(AudioManager.audioSourcesSO.clickCard, 0.1f);
         Debug.Log("GameManager->OnCardClicked - Card clicked: " + card.gameObject.name + " currentPlayerIndex: " + currentPlayerIndex);
 
         // !Just for testing purposes - move or flip:
@@ -613,7 +637,74 @@ public class GameManager : MonoBehaviour
             Debug.Log("Max run player 1: " + gameStateScript.GetTotalAdjacentColorCount(players[1]));
         }
     }
+
+    void StartUITestGame()
+    {
+        Debug.Log("UITest: Initializing");
+
+        totalPlayers = 1;
+
+        // --- Create 1 player ---
+        playersParentGO = new GameObject("_Players");
+
+        GameObject p0 = new GameObject("Player0", typeof(PlayerX));
+        p0.transform.SetParent(playersParentGO.transform);
+
+        // Set Player 0 position to bottom center (-6, -3, 0)
+        p0.transform.position = new Vector3(-6f, -3f, 0f);
+
+        players[0] = p0.GetComponent<PlayerX>();
+        players[0].playerId = 0;
+        players[0].playerName = "NULL";
+
+        inputManager.activePlayer = players[0];
+
+        // --- Auto-generate 6 hand slot transforms ---
+        int numSlots = 6;
+        float slotSpacing = 1.5f; // horizontal spacing between cards
+        UIManager.Instance.playerHolders[0].playerHandHolders = new Transform[numSlots];
+
+        for (int i = 0; i < numSlots; i++)
+        {
+            GameObject slotGO = new GameObject("HandSlot" + i);
+            slotGO.transform.SetParent(p0.transform, false);
+
+            // Position slots relative to player
+            slotGO.transform.localPosition = new Vector3(i * slotSpacing, 0, 0);
+
+            // Assign to UIManager
+            UIManager.Instance.playerHolders[0].playerHandHolders[i] = slotGO.transform;
+        }
+
+        // --- Create 6 cards and animate them to bottom holder ---
+        for (int i = 0; i < numSlots; i++)
+        {
+            CardObject c = InstantiateCardObjectFromPOD(
+                new CardPOD(),                       // dummy POD for UITest
+                UIManager.Instance.drawPileTransform.position,  // spawn at draw pile
+                cardState.drawPile,
+                0
+            );
+
+            // Animate to the player's hand slot
+            UIManager.Instance.MoveCard(
+                c,
+                UIManager.Instance.drawPileTransform,
+                UIManager.Instance.playerHolders[0].playerHandHolders[i],
+                i
+            );
+
+            // Mark ownership & state
+            c.cardPOD.state = cardState.playerHolder;
+            c.cardPOD.ownerPlayerID = 0;
+            players[0].hand[i] = c;
+        }
+
+        Debug.Log("UITest Game Setup Complete");
+    }
 }
+
+
 
     /*
     // !REMNANT CODE FROM GAMEMANAGER - Useful for debugging/viewing entire deck in staggered pile

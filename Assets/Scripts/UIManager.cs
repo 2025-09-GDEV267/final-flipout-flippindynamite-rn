@@ -1,13 +1,17 @@
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 
 
-public class CardHoverUIManager : MonoBehaviour
+public class UIManager : MonoBehaviour
 {
+
+    public static UIManager Instance;
+
     private CardObject selectedCard = null;
     private GameObject Outline = null;
 
-    [Header("Hover Settings")]
+    [Header("Outline Settings")]
     public float scaleMultiplier = 1.10f;
     public Vector3 behindOffset = new Vector3(0f, 0f, 1f);
     [Tooltip("Sprite used for the white silhouette")]
@@ -20,10 +24,14 @@ public class CardHoverUIManager : MonoBehaviour
 
     [Header("UI Position References")]
     [Tooltip("Assign one element per player. Each element contains hand slots and score pile transform.")]
-    public UIPlayerHolder[] playerHolders;
+    public UIHolder[] playerHolders;
 
     [Tooltip("Location of the draw pile in the scene.")]
     public Transform drawPileTransform;
+
+    [Header("Movement Settings")]
+    public float moveDuration = 0.35f;               // This affects the movement tween speed
+    public AnimationCurve moveCurve = AnimationCurve.EaseInOut(0,0,1,1);
 
     // sorting order control
     public int frontOffset = 1000;
@@ -31,6 +39,11 @@ public class CardHoverUIManager : MonoBehaviour
 
     private Dictionary<CardObject, int> originalSortingOrders = new Dictionary<CardObject, int>();
     private Dictionary<CardObject, string> originalSortingLayerNames = new Dictionary<CardObject, string>();
+
+    void Awake()
+    {
+        Instance = this;
+    }
 
     private void OnEnable()
     {
@@ -233,14 +246,99 @@ public class CardHoverUIManager : MonoBehaviour
         }
     }
 
+    public void MoveCard(CardObject card, Transform from, Transform toHolder, int slotIndex = -1)
+    {
+        if (card == null || toHolder == null)
+        {
+            Debug.LogWarning("MoveCard called with missing references!");
+            return;
+        }
+
+        // Default target position is the holder's position
+        Vector3 targetPos = toHolder.position;
+
+        if (slotIndex >= 0)
+        {
+            // Look through each UIPlayerHolder
+            foreach (var holder in playerHolders)
+            {
+                // Check hand slots
+                if (holder.slots != null && slotIndex < holder.slots.Length && holder.slots[slotIndex] == toHolder)
+                {
+                    targetPos = holder.slots[slotIndex].position;
+                    break;
+                }
+
+                // Check player hand anchors
+                if (holder.playerHandHolders != null && slotIndex < holder.playerHandHolders.Length && holder.playerHandHolders[slotIndex] == toHolder)
+                {
+                    targetPos = holder.playerHandHolders[slotIndex].position;
+                    break;
+                }
+
+                // Check score slots
+                if (holder.playerScoreHolders != null && slotIndex < holder.playerScoreHolders.Length && holder.playerScoreHolders[slotIndex] == toHolder)
+                {
+                    targetPos = holder.playerScoreHolders[slotIndex].position;
+                    break;
+                }
+            }
+
+            // Check draw pile
+            foreach (var holder in playerHolders)
+            {
+                if (holder.drawPileHolder != null && holder.drawPileHolder == toHolder)
+                {
+                    targetPos = holder.drawPileHolder.position;
+                    break;
+                }
+            }
+        }
+
+        // Start the movement animation
+        StartCoroutine(AnimateCardMovement(card, targetPos));
+    }
+
+    private IEnumerator AnimateCardMovement(CardObject card, Vector3 targetPos)
+    {
+        if (card == null)
+            yield break;
+
+        Transform t = card.transform;
+        Vector3 start = t.position;
+        float time = 0f;
+
+        while (time < moveDuration)
+        {
+            float p = time / moveDuration;
+            float curve = moveCurve.Evaluate(p);
+
+            t.position = Vector3.Lerp(start, targetPos, curve);
+
+            time += Time.deltaTime;
+            yield return null; // correct Unity coroutine yield
+        }
+
+        t.position = targetPos; // ensure final exact position
+    }
 }
 
 [System.Serializable]
-public class UIPlayerHolder
+public class UIHolder
 {
+    [Header("Hand slots")]
     [Tooltip("Positions for cards in the player's hand (0–5 slots).")]
-    public Transform[] handSlots;
+    public Transform[] slots;               // Individual slots for each card in hand
 
-    [Tooltip("Position of the player's score pile.")]
-    public Transform scorePile;
+    [Header("Player Anchors")]
+    [Tooltip("Empty GameObjects representing player hand and score areas.")]
+    public Transform[] playerHandHolders;      // Anchor objects for the player's hand
+    public Transform[] playerScoreHolders;     // Anchor objects for the player's score pile
+
+    [Header("Draw Pile Anchor")]
+    [Tooltip("Anchor for the draw pile for this player.")]
+    public Transform drawPileHolder;           // Anchor for draw pile UI
+
+    // Note: Avoid referencing any objects that contain UIManager itself
+    // or that could indirectly reference back to UIManager to prevent serialization cycles.
 }
