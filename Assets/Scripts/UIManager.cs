@@ -1,15 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum UIState
-{
-SelectionPending,
-NothingSelected,
-};
 
 public class CardHoverUIManager : MonoBehaviour
 {
-    private GameObject hoverCopy = null;
+    private CardObject selectedCard = null;
+    private GameObject Outline = null;
 
     [Header("Hover Settings")]
     public float scaleMultiplier = 1.10f;
@@ -22,101 +18,91 @@ public class CardHoverUIManager : MonoBehaviour
     public Color darkenColor = new Color(0.4f, 0.4f, 0.4f, 1f);
     public Color normalColor = Color.white;
 
+    [Header("UI Position References")]
+    [Tooltip("Assign one element per player. Each element contains hand slots and score pile transform.")]
+    public UIPlayerHolder[] playerHolders;
 
-    // How much to bump the hovered card's sortingOrder so it sits above everything.
-    // Use a large number to avoid conflicts with other ordering logic.
+    [Tooltip("Location of the draw pile in the scene.")]
+    public Transform drawPileTransform;
+
+    // sorting order control
     public int frontOffset = 1000;
-
-    // Small negative offset so the outline sits directly behind the boosted card.
     public int outlineRelativeOffset = -1;
 
-    // We store original sorting orders per-card so they can be restored precisely.
     private Dictionary<CardObject, int> originalSortingOrders = new Dictionary<CardObject, int>();
     private Dictionary<CardObject, string> originalSortingLayerNames = new Dictionary<CardObject, string>();
 
     private void OnEnable()
     {
-        CardObject.OnHoverEnter += CreateHoverCopy;
-        CardObject.OnHoverExit += DestroyHoverCopy;
+        CardObject.OnHoverEnter += CreateOutline;
+        CardObject.OnHoverExit += DestroyOutline;
+        CardObject.onCardClicked += ToggleSelection;
     }
 
     private void OnDisable()
     {
-        CardObject.OnHoverEnter -= CreateHoverCopy;
-        CardObject.OnHoverExit -= DestroyHoverCopy;
+        CardObject.OnHoverEnter -= CreateOutline;
+        CardObject.OnHoverExit -= DestroyOutline;
+        CardObject.onCardClicked -= ToggleSelection;
     }
 
-    private void CreateHoverCopy(CardObject card)
+    private void CreateOutline(CardObject card)
     {
         if (card == null) return;
-
+        if (selectedCard != null) return;
         SpriteRenderer originalSR = card.GetComponent<SpriteRenderer>();
         if (originalSR == null)
         {
-            Debug.LogWarning("CreateHoverCopy: card missing SpriteRenderer");
+            Debug.LogWarning("CreateOutline: card missing SpriteRenderer");
             return;
         }
 
-        // If we are already hovering this card, do nothing
         if (originalSortingOrders.ContainsKey(card))
             return;
 
-        // Store original order & layer
         originalSortingOrders[card] = originalSR.sortingOrder;
         originalSortingLayerNames[card] = originalSR.sortingLayerName;
 
-        // Boost real card to front
         originalSR.sortingOrder = originalSortingOrders[card] + frontOffset;
 
-        // Remove any previous hover copy (safety)
-        if (hoverCopy != null)
+        if (Outline != null)
         {
-            Destroy(hoverCopy);
-            hoverCopy = null;
+            Destroy(Outline);
+            Outline = null;
         }
 
-        // Create the hover copy
-        hoverCopy = new GameObject("HoverCopy");
-        hoverCopy.transform.SetParent(card.transform, true);
-        hoverCopy.transform.position = card.transform.position + behindOffset;
-        hoverCopy.transform.localScale = card.transform.localScale * scaleMultiplier;
+        Outline = new GameObject("Outline");
+        Outline.transform.SetParent(card.transform, true);
+        Outline.transform.position = card.transform.position + behindOffset;
+        Outline.transform.localScale = card.transform.localScale * scaleMultiplier;
 
-        SpriteRenderer copySR = hoverCopy.AddComponent<SpriteRenderer>();
+        SpriteRenderer copySR = Outline.AddComponent<SpriteRenderer>();
 
-        // Use the white sprite provided in the inspector
         if (whiteSprite != null)
             copySR.sprite = whiteSprite;
         else
         {
-            // fallback to white rectangle if sprite missing (safe fallback)
             copySR.sprite = originalSR.sprite;
             Debug.LogWarning("CardHoverUIManager: whiteSprite not assigned — using original sprite as fallback.");
         }
 
-        // Visual settings
         copySR.color = Color.white;
         copySR.sortingLayerName = originalSR.sortingLayerName;
-        // Outline should sit just behind the boosted original
         copySR.sortingOrder = originalSR.sortingOrder + outlineRelativeOffset;
 
-        // Ensure the hover copy won't intercept raycasts / mouse events
-        foreach (var col in hoverCopy.GetComponents<Collider2D>())
+        foreach (var col in Outline.GetComponents<Collider2D>())
             col.enabled = false;
-
-        // Also remove any automatically copied components that could interfere
-        // (If you used Instantiate(original.gameObject) earlier this would be more important)
+        
     }
 
-    private void DestroyHoverCopy(CardObject card)
+    private void DestroyOutline(CardObject card)
     {
         if (card == null)
         {
-            // cleanup any lingering hover copy
             RestoreAllAndClear();
             return;
         }
 
-        // Restore the card's original sorting order if we stored it
         if (originalSortingOrders.TryGetValue(card, out int originalOrder))
         {
             SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
@@ -131,14 +117,13 @@ public class CardHoverUIManager : MonoBehaviour
             originalSortingLayerNames.Remove(card);
         }
 
-        if (hoverCopy != null)
+        if (Outline != null)
         {
-            Destroy(hoverCopy);
-            hoverCopy = null;
+            Destroy(Outline);
+            Outline = null;
         }
     }
 
-    // If something unexpected happens, this forces a full restore.
     private void RestoreAllAndClear()
     {
         foreach (var kv in originalSortingOrders)
@@ -155,10 +140,107 @@ public class CardHoverUIManager : MonoBehaviour
         originalSortingOrders.Clear();
         originalSortingLayerNames.Clear();
 
-        if (hoverCopy != null)
+        if (Outline != null)
         {
-            Destroy(hoverCopy);
-            hoverCopy = null;
+            Destroy(Outline);
+            Outline = null;
         }
     }
+
+    private void ToggleSelection(CardObject card)
+    {
+        if (card == null) return;
+
+        // Clicking the currently selected card unselects it
+        if (selectedCard == card)
+        {
+            ClearSelection();
+            return;
+        }
+
+    // Selecting a new card
+    SetSelectedCard(card);
+    }
+
+    private void SetSelectedCard(CardObject card)
+    {
+        selectedCard = card;
+
+        //Scale selected card up
+        SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            card.transform.localScale = Vector3.one * selectedScaleMultiplier;
+
+            //Bring to front
+            sr.sortingOrder = 5000; 
+        }
+
+        //Darken every OTHER card
+        DarkenAllExcept(card);
+
+        //Remove hover copy (hovering makes no sense while selected)
+        RestoreAllAndClear();
+    }
+
+    private void DarkenAllExcept(CardObject keepLit)
+    {
+        var allCards = GameObject.FindGameObjectsWithTag("Card");
+
+        foreach (var obj in allCards)
+        {
+            var c = obj.GetComponent<CardObject>();
+            if (c == null) continue;
+
+            SpriteRenderer sr = c.GetComponent<SpriteRenderer>();
+            if (sr == null) continue;
+
+            if (c == keepLit)
+                sr.color = normalColor;   // selected stays normal
+            else
+                sr.color = darkenColor;   // others darken
+        }
+    }
+
+    private void ClearSelection()
+    {
+        if (selectedCard != null)
+        {
+            // Restore scale
+            selectedCard.transform.localScale = Vector3.one;
+
+            // Restore sorting order
+            SpriteRenderer sr = selectedCard.GetComponent<SpriteRenderer>();
+            if (sr != null)
+                sr.sortingOrder = 0;
+        }
+
+        selectedCard = null;
+
+        // Reset all card colors
+        RestoreAllCardColors();
+    }
+
+    private void RestoreAllCardColors()
+    {
+        var allCards = GameObject.FindGameObjectsWithTag("Card");
+
+        foreach (var obj in allCards)
+        {
+            var sr = obj.GetComponent<SpriteRenderer>();
+            if (sr != null)
+                sr.color = normalColor;
+        }
+    }
+
+}
+
+[System.Serializable]
+public class UIPlayerHolder
+{
+    [Tooltip("Positions for cards in the player's hand (0–5 slots).")]
+    public Transform[] handSlots;
+
+    [Tooltip("Position of the player's score pile.")]
+    public Transform scorePile;
 }
