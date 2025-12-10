@@ -524,9 +524,6 @@ public class GameManager : MonoBehaviour
             GameObject playerGO = new GameObject("Player" + i);
             playerGO.transform.SetParent(playersParentGO.transform);
 
-            // Auto-generate 6 slots at the player's base position
-            Transform[] handSlots = GenerateHandSlots(playerGO, playerPositions[i]);
-
             // (Optional) store these slots somewhere
             // playerHandSlots[i] = handSlots;
         }
@@ -1254,111 +1251,108 @@ public class GameManager : MonoBehaviour
         return holder;
     }
 
-     public Transform[] GenerateHandSlots(GameObject playerGO, Vector3 basePosition, int numSlots = 6)
+    public Transform[] GenerateHandSlots(GameObject playerGO, int numSlots = 6)
     {
-         Transform[] slots = new Transform[numSlots];
+        Transform[] slots = new Transform[numSlots];
 
-         for (int i = 0; i < numSlots; i++)
-          {
-              GameObject slot = new GameObject($"HandSlot_{i}");
-              slot.transform.SetParent(playerGO.transform);
+        float spacing = 1.25f; // adjust spacing between cards
 
-             // Horizontal spacing using cardHolderOffset.x
-              Vector3 offset = new Vector3(cardHolderOffset.x * i, 0, 0);
-              slot.transform.localPosition = basePosition + offset;
-
-              // Optional: slight Z offset for draw order
-              slot.transform.localPosition += new Vector3(0, 0, -0.01f * i);
-
-              slots[i] = slot.transform;
-           }
-
-            return slots;
-    }
-
-
-private void StartUITestTwoPlayer()
-{
-    Debug.Log("UITest: Initializing 2-player test");
-
-    // --- Create UIHolder array (2 players) ---
-    UIManager.Instance.playerHolders = new UIHolder[2];
-    UIManager.Instance.playerHolders[0] = CreateUIHolder("P0_UIHolder");
-    UIManager.Instance.playerHolders[1] = CreateUIHolder("P1_UIHolder");
-
-    // --- Create Player GameObjects ---
-    playersParentGO = new GameObject("_Players");
-
-    // Actual player data model (NOT components)
-    players = new PlayerXClient[2];
-
-    // Player 0 GameObject (just for transform in scene)
-    GameObject p0 = new GameObject("Player0");
-    p0.transform.SetParent(playersParentGO.transform);
-    p0.transform.position = new Vector3(-6f, -3f, 0f);
-
-    // Create pure data object
-    players[0] = new PlayerXClient();
-    players[0].playerName = "P0";
-    players[0].playerId = 0;
-
-    // Player 1
-    GameObject p1 = new GameObject("Player1");
-    p1.transform.SetParent(playersParentGO.transform);
-    p1.transform.position = new Vector3(-6f, 3f, 0f);
-
-    players[1] = new PlayerXClient();
-    players[1].playerName = "P1";
-    players[1].playerId = 1;
-    
-    // Mirror into .slots for MoveCard() compatibility
-    UIManager.Instance.playerHolders[0].slots =
-        UIManager.Instance.playerHolders[0].playerHandHolders;
-
-    UIManager.Instance.playerHolders[1].slots =
-        UIManager.Instance.playerHolders[1].playerHandHolders;
-
-    // --- Deal 6 cards to each ---
-    const int NUM_CARDS = 6;
-
-    for (int player = 0; player < 2; player++)
-    {
-        for (int i = 0; i < NUM_CARDS; i++)
+        for (int i = 0; i < numSlots; i++)
         {
-            // Create dummy POD
-            CardPODClient pod = new CardPODClient();
-            pod.cardID = UnityEngine.Random.Range(0, 999999);
-            pod.color = (CardColor)UnityEngine.Random.Range(0, 5);
-            pod.state = CardState.drawPile;
-            pod.ownerPlayerID = player;
+            GameObject slot = new GameObject($"HandSlot_{i}");
+            slot.transform.SetParent(playerGO.transform);
 
-            // Instantiate card offscreen or at draw pile
-            CardObject c = InstantiateCardObjectFromPOD(
-                pod,
-                UIManager.Instance.drawPileTransform.position,
-                CardState.drawPile,
-                player
-            );
+            // Even horizontal spacing centered around player root
+            float startX = -((numSlots - 1) * spacing) / 2f;
+            float xPos = startX + spacing * i;
 
-            // Move to UI slot
-            UIManager.Instance.MoveCard(
-                c,
-                UIManager.Instance.drawPileTransform,
-                UIManager.Instance.playerHolders[player].playerHandHolders[i],
-                i
-            );
-
-            // Update state
-            c.cardPOD.state = CardState.playerHolder;
-
-            // FIX: assign the POD, not the CardObject
-            players[player].hand[i] = c.cardPOD;
+            slot.transform.localPosition = new Vector3(xPos, 0, -0.01f * i);
+            slots[i] = slot.transform;
         }
+
+        return slots;
     }
 
-    Debug.Log("UITest 2-player setup complete!");
-}
 
+    private void StartUITestTwoPlayer()
+    {
+        Debug.Log("UITest: Initializing 2-player test");
+
+        // --- Create UIHolder array (2 players) ---
+        UIManager.Instance.playerHolders = new UIHolder[2];
+        UIManager.Instance.playerHolders[0] = CreateUIHolder("P0_UIHolder");
+        UIManager.Instance.playerHolders[1] = CreateUIHolder("P1_UIHolder");
+
+        // --- Create Player GameObjects (positions only) ---
+        playersParentGO = new GameObject("_Players");
+
+        GameObject p0 = new GameObject("Player0");
+        p0.transform.SetParent(playersParentGO.transform);
+        p0.transform.position = new Vector3(0f, -3.5f, 0f);    // Bottom center
+
+        GameObject p1 = new GameObject("Player1");
+        p1.transform.SetParent(playersParentGO.transform);
+        p1.transform.position = new Vector3(0f, 3.5f, 0f);     // Top center
+
+        // --- Logical players (data only) ---
+        players = new PlayerXClient[2];
+        players[0] = new PlayerXClient { playerId = 0, playerName = "P0" };
+        players[1] = new PlayerXClient { playerId = 1, playerName = "P1" };
+
+        // --- Assign Holder Roots ---
+        UIManager.Instance.playerHolders[0].holderRoot = p0.transform;
+        UIManager.Instance.playerHolders[1].holderRoot = p1.transform;
+
+        // --- Generate centered hand slots for each player ---
+        UIManager.Instance.playerHolders[0].playerHandHolders = 
+            GenerateHandSlots(p0);
+
+        UIManager.Instance.playerHolders[1].playerHandHolders = 
+            GenerateHandSlots(p1);
+
+        // Mirror into .slots for MoveCard compatibility
+        UIManager.Instance.playerHolders[0].slots =
+            UIManager.Instance.playerHolders[0].playerHandHolders;
+
+        UIManager.Instance.playerHolders[1].slots =
+            UIManager.Instance.playerHolders[1].playerHandHolders;
+
+        // --- Deal 6 cards to each ---
+        const int NUM_CARDS = 6;
+
+        for (int player = 0; player < 2; player++)
+        {
+            for (int i = 0; i < NUM_CARDS; i++)
+            {
+                CardPODClient pod = new CardPODClient
+                {
+                    cardID = UnityEngine.Random.Range(0, 999999),
+                    color = (CardColor)UnityEngine.Random.Range(0, 5),
+                    state = CardState.drawPile,
+                    ownerPlayerID = player
+                };
+
+                CardObject c = InstantiateCardObjectFromPOD(
+                    pod,
+                    UIManager.Instance.drawPileTransform.position,
+                    CardState.drawPile,
+                    player
+                );
+
+                UIManager.Instance.MoveCard(
+                    c,
+                    UIManager.Instance.drawPileTransform,
+                    UIManager.Instance.playerHolders[player].playerHandHolders[i],
+                    i
+                );
+
+                c.cardPOD.state = CardState.playerHolder;
+                players[player].hand[i] = c.cardPOD;
+            }
+        }
+
+        Debug.Log("UITest 2-player setup complete!");
+    }
 
 #region Client-Server
 
