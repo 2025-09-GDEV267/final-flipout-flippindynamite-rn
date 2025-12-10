@@ -16,7 +16,8 @@ public enum Scenes
     LobbyOnline,
     Game,
     GameOver,
-    DCExperiments
+    DCExperiments,
+    UITest
 }
 
 // AppState ? (avoids collision with GameState script)
@@ -65,6 +66,10 @@ public class GameManager : MonoBehaviour
     public MultiplayerMode currentMultiplayerMode = MultiplayerMode.Disconnected;    
 
     //[SerializeField] private PlayerX[] players = new PlayerX[5];
+    
+    public int totalPlayers = 0;
+
+    public PlayerXClient[] players;
 
     GameObject playersParentGO = null;
     //private int localPlayer1Index = 0;
@@ -126,7 +131,9 @@ public class GameManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);        
+            DontDestroyOnLoad(gameObject);   
+            // Enough room for 2 players (or more later)
+            players = new PlayerXClient[4];     
         }
         else
         {
@@ -145,7 +152,7 @@ public class GameManager : MonoBehaviour
             Debug.LogError("Failed to load audio clip from Resources folder.");
             return;
         }
-        AudioManager.Play(clip, 0.25f);
+        AudioManager.Play(clip, 0.01f);
         /*clickSound = Resources.Load<AudioClip>("Audio/OVS_Clicky");
         if (clickSound == null)
         {
@@ -208,6 +215,12 @@ public class GameManager : MonoBehaviour
                 currentScene = scenesSO.DCExperimentsSceneEnum;
                 currentGameState = GameStatus.Playing;
                 break;
+            case Scenes.UITest:
+                SceneManager.LoadScene(scenesSO.UITestScene);
+                //currentScene = Scenes.DCExperiments;
+                currentScene = scenesSO.UITestSceneEnum;
+                currentGameState = GameStatus.Playing;
+                break;
             default:
                 Debug.LogError("Unknown scene: " + scene);
                 break;
@@ -268,6 +281,15 @@ public class GameManager : MonoBehaviour
             {
                 Debug.Log("currentScene mismatch; currentScene set to " + currentScene.ToString() + "; updating to " + Scenes.DCExperiments.ToString());
                 currentScene = Scenes.Game; // !!
+                currentGameState = GameStatus.Playing;
+            }
+        }
+        else if (activeSceneName == scenesSO.UITestScene)
+        {
+            if (currentScene != Scenes.UITest)
+            {
+                Debug.Log("currentScene mismatch; currentScene set to " + currentScene.ToString() + "; updating to " + Scenes.UITest.ToString());
+                currentScene = Scenes.UITest; // !!
                 currentGameState = GameStatus.Playing;
             }
         }
@@ -384,6 +406,10 @@ public class GameManager : MonoBehaviour
             //DrawPileDisplayTopCard();
             cardsShowing = true;
         }
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+          StartUITestTwoPlayer();
+        }
     }
 
 
@@ -495,8 +521,14 @@ public class GameManager : MonoBehaviour
         playersParentGO = new GameObject("_Players");
         for (int i = 0; i < numPlayers; i++)
         {
-            GameObject playerGO = new GameObject("Player" + i); //, typeof(PlayerXClient));
+            GameObject playerGO = new GameObject("Player" + i);
             playerGO.transform.SetParent(playersParentGO.transform);
+
+            // Auto-generate 6 slots at the player's base position
+            Transform[] handSlots = GenerateHandSlots(playerGO, playerPositions[i]);
+
+            // (Optional) store these slots somewhere
+            // playerHandSlots[i] = handSlots;
         }
 
         //inputManager.activePlayerId = gameStateServer.GetActivePlayerNumber();
@@ -948,29 +980,64 @@ public class GameManager : MonoBehaviour
     }
 
 
-    private CardObject InstantiateCardObjectFromPOD(CardPODClient cardPOD, Vector3 position, CardState newState = CardState.playerHolder, int playerID = -1)
+    private CardObject InstantiateCardObjectFromPOD(
+        CardPODClient pod,
+        Vector3 spawnPosition,
+        CardState newState = CardState.playerHolder,
+        int ownerPlayerID = -1)
     {
+        // --- Ensure parent exists ---
         if (cardsParentGO == null)
-        {
-            cardsParentGO = new GameObject("_Cards");            
-        }
+            cardsParentGO = new GameObject("_Cards");
+
+        // --- Load prefab if needed ---
+        if (cardPrefab == null)
+            cardPrefab = Resources.Load<GameObject>("Prefabs/CardPF");
+
         if (cardPrefab == null)
         {
-            cardPrefab = Resources.Load<GameObject>("Prefabs/CardPF");
+            Debug.LogError("InstantiateCardObjectFromPOD ERROR: Could not load Prefabs/CardPF");
+            return null;
         }
 
-        GameObject cardGO = GameObject.Instantiate(cardPrefab, position, Quaternion.identity, cardsParentGO.transform);
-        
-        CardObject cardObject = cardGO.GetComponent<CardObject>();
+        // --- Instantiate the GameObject ---
+        GameObject cardGO = Instantiate(
+            cardPrefab,
+            spawnPosition,
+            Quaternion.identity,
+            cardsParentGO.transform
+        );
 
-        // Attach Card POD to CardObject
-        cardPOD.state = newState;
-        cardPOD.ownerPlayerID = playerID;
-        cardObject.SetCardPOD(cardPOD);
+        CardObject cardObj = cardGO.GetComponent<CardObject>();
+        if (cardObj == null)
+        {
+            Debug.LogError("Card prefab is missing CardObject component!");
+            return null;
+        }
 
-        cardsInPlay.Add(cardObject);
+        // --- Assign POD data ---
+        pod.state = newState;
+        pod.ownerPlayerID = ownerPlayerID;
+        pod.cardObject = cardObj;
+        pod.cardGO = cardGO;
 
-        return cardObject;
+        // The CardObject has its own method that copies POD data into visuals
+        cardObj.SetCardPOD(pod);
+
+        // --- DEFAULT VISUAL CONFIGURATION ---
+        SpriteRenderer sr = cardGO.GetComponent<SpriteRenderer>();
+
+        if (sr != null)
+        {
+            sr.sortingOrder = 0;
+            sr.color = Color.white;
+        }
+
+        // --- Track card for cleanup ---
+        if (cardsInPlay != null)
+            cardsInPlay.Add(cardObj);
+
+        return cardObj;
     }
 
 
@@ -1174,6 +1241,123 @@ public class GameManager : MonoBehaviour
 
 #endregion
 
+    private UIHolder CreateUIHolder(string name)
+    {
+        UIHolder holder = new UIHolder();
+
+        holder.playerHandHolders = new Transform[6];
+        holder.playerScoreHolders = new Transform[6];
+        holder.slots = new Transform[6];
+
+        holder.drawPileHolder = new GameObject(name + "_DrawPileAnchor").transform;
+
+        return holder;
+    }
+
+     public Transform[] GenerateHandSlots(GameObject playerGO, Vector3 basePosition, int numSlots = 6)
+    {
+         Transform[] slots = new Transform[numSlots];
+
+         for (int i = 0; i < numSlots; i++)
+          {
+              GameObject slot = new GameObject($"HandSlot_{i}");
+              slot.transform.SetParent(playerGO.transform);
+
+             // Horizontal spacing using cardHolderOffset.x
+              Vector3 offset = new Vector3(cardHolderOffset.x * i, 0, 0);
+              slot.transform.localPosition = basePosition + offset;
+
+              // Optional: slight Z offset for draw order
+              slot.transform.localPosition += new Vector3(0, 0, -0.01f * i);
+
+              slots[i] = slot.transform;
+           }
+
+            return slots;
+    }
+
+
+private void StartUITestTwoPlayer()
+{
+    Debug.Log("UITest: Initializing 2-player test");
+
+    // --- Create UIHolder array (2 players) ---
+    UIManager.Instance.playerHolders = new UIHolder[2];
+    UIManager.Instance.playerHolders[0] = CreateUIHolder("P0_UIHolder");
+    UIManager.Instance.playerHolders[1] = CreateUIHolder("P1_UIHolder");
+
+    // --- Create Player GameObjects ---
+    playersParentGO = new GameObject("_Players");
+
+    // Actual player data model (NOT components)
+    players = new PlayerXClient[2];
+
+    // Player 0 GameObject (just for transform in scene)
+    GameObject p0 = new GameObject("Player0");
+    p0.transform.SetParent(playersParentGO.transform);
+    p0.transform.position = new Vector3(-6f, -3f, 0f);
+
+    // Create pure data object
+    players[0] = new PlayerXClient();
+    players[0].playerName = "P0";
+    players[0].playerId = 0;
+
+    // Player 1
+    GameObject p1 = new GameObject("Player1");
+    p1.transform.SetParent(playersParentGO.transform);
+    p1.transform.position = new Vector3(-6f, 3f, 0f);
+
+    players[1] = new PlayerXClient();
+    players[1].playerName = "P1";
+    players[1].playerId = 1;
+    
+    // Mirror into .slots for MoveCard() compatibility
+    UIManager.Instance.playerHolders[0].slots =
+        UIManager.Instance.playerHolders[0].playerHandHolders;
+
+    UIManager.Instance.playerHolders[1].slots =
+        UIManager.Instance.playerHolders[1].playerHandHolders;
+
+    // --- Deal 6 cards to each ---
+    const int NUM_CARDS = 6;
+
+    for (int player = 0; player < 2; player++)
+    {
+        for (int i = 0; i < NUM_CARDS; i++)
+        {
+            // Create dummy POD
+            CardPODClient pod = new CardPODClient();
+            pod.cardID = UnityEngine.Random.Range(0, 999999);
+            pod.color = (CardColor)UnityEngine.Random.Range(0, 5);
+            pod.state = CardState.drawPile;
+            pod.ownerPlayerID = player;
+
+            // Instantiate card offscreen or at draw pile
+            CardObject c = InstantiateCardObjectFromPOD(
+                pod,
+                UIManager.Instance.drawPileTransform.position,
+                CardState.drawPile,
+                player
+            );
+
+            // Move to UI slot
+            UIManager.Instance.MoveCard(
+                c,
+                UIManager.Instance.drawPileTransform,
+                UIManager.Instance.playerHolders[player].playerHandHolders[i],
+                i
+            );
+
+            // Update state
+            c.cardPOD.state = CardState.playerHolder;
+
+            // FIX: assign the POD, not the CardObject
+            players[player].hand[i] = c.cardPOD;
+        }
+    }
+
+    Debug.Log("UITest 2-player setup complete!");
+}
 
 
 #region Client-Server

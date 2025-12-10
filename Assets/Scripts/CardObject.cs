@@ -146,6 +146,19 @@ public class CardObject : MonoBehaviour
         gameObject.transform.localScale = scale;
     }
 
+    public static event System.Action<CardObject> OnHoverEnter;
+    public static event System.Action<CardObject> OnHoverExit;
+    
+    private void OnMouseEnter()
+    {
+    OnHoverEnter?.Invoke(this);
+    }
+
+    private void OnMouseExit()
+    {
+    OnHoverExit?.Invoke(this);
+    }
+
     public void HighlightCardToggle()
     {
         if (highlightPrefab == null)
