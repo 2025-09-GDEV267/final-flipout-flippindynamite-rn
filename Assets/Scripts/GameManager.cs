@@ -146,7 +146,7 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("GameManager->Start()");
 
-        AudioClip clip = Resources.Load<AudioClip>("Audio/OVS_CorporateVol2BeyontheBlueprintCut30");
+        AudioClip clip = Resources.Load<AudioClip>("Audio/Bloonstheme");
         if (clip == null)
         {
             Debug.LogError("Failed to load audio clip from Resources folder.");
@@ -1023,7 +1023,10 @@ public class GameManager : MonoBehaviour
 
         // --- DEFAULT VISUAL CONFIGURATION ---
         SpriteRenderer sr = cardGO.GetComponent<SpriteRenderer>();
-
+        
+        // --- ASSIGN CARD VALID TAG ---
+        cardGO.tag = "Valid";
+        
         if (sr != null)
         {
             sr.sortingOrder = 0;
@@ -1251,73 +1254,55 @@ public class GameManager : MonoBehaviour
         return holder;
     }
 
-    public Transform[] GenerateHandSlots(GameObject playerGO, int numSlots = 6)
-    {
-        Transform[] slots = new Transform[numSlots];
-
-        float spacing = 1.25f; // adjust spacing between cards
-
-        for (int i = 0; i < numSlots; i++)
-        {
-            GameObject slot = new GameObject($"HandSlot_{i}");
-            slot.transform.SetParent(playerGO.transform);
-
-            // Even horizontal spacing centered around player root
-            float startX = -((numSlots - 1) * spacing) / 2f;
-            float xPos = startX + spacing * i;
-
-            slot.transform.localPosition = new Vector3(xPos, 0, -0.01f * i);
-            slots[i] = slot.transform;
-        }
-
-        return slots;
-    }
-
 
     private void StartUITestTwoPlayer()
     {
         Debug.Log("UITest: Initializing 2-player test");
 
-        // --- Create UIHolder array (2 players) ---
+        //Create UIHolder array (2 players)
         UIManager.Instance.playerHolders = new UIHolder[2];
         UIManager.Instance.playerHolders[0] = CreateUIHolder("P0_UIHolder");
         UIManager.Instance.playerHolders[1] = CreateUIHolder("P1_UIHolder");
 
-        // --- Create Player GameObjects (positions only) ---
+        //Create Player GameObjects (for transform positions)
         playersParentGO = new GameObject("_Players");
 
         GameObject p0 = new GameObject("Player0");
         p0.transform.SetParent(playersParentGO.transform);
-        p0.transform.position = new Vector3(0f, -3.5f, 0f);    // Bottom center
+        p0.transform.position = new Vector3(0f, -3.5f, 0f);  // Bottom center
 
         GameObject p1 = new GameObject("Player1");
         p1.transform.SetParent(playersParentGO.transform);
-        p1.transform.position = new Vector3(0f, 3.5f, 0f);     // Top center
+        p1.transform.position = new Vector3(0f, 3.5f, 0f);   // Top center
 
-        // --- Logical players (data only) ---
+        //Create logical data-only players
         players = new PlayerXClient[2];
         players[0] = new PlayerXClient { playerId = 0, playerName = "P0" };
         players[1] = new PlayerXClient { playerId = 1, playerName = "P1" };
 
-        // --- Assign Holder Roots ---
+        //Assign roots for each UIHolder
         UIManager.Instance.playerHolders[0].holderRoot = p0.transform;
         UIManager.Instance.playerHolders[1].holderRoot = p1.transform;
 
-        // --- Generate centered hand slots for each player ---
-        UIManager.Instance.playerHolders[0].playerHandHolders = 
-            GenerateHandSlots(p0);
 
-        UIManager.Instance.playerHolders[1].playerHandHolders = 
-            GenerateHandSlots(p1);
+        //Generate hand slot transforms using UIManager
 
-        // Mirror into .slots for MoveCard compatibility
+        UIManager.Instance.playerHolders[0].playerHandHolders =
+            UIManager.Instance.GenerateHandSlots(p0.transform, Vector3.zero, 6);
+
+        UIManager.Instance.playerHolders[1].playerHandHolders =
+            UIManager.Instance.GenerateHandSlots(p1.transform, Vector3.zero, 6);
+
+        // Compatibility alias for MoveCard()
         UIManager.Instance.playerHolders[0].slots =
             UIManager.Instance.playerHolders[0].playerHandHolders;
 
         UIManager.Instance.playerHolders[1].slots =
             UIManager.Instance.playerHolders[1].playerHandHolders;
 
-        // --- Deal 6 cards to each ---
+
+        //Deal 6 cards to each player
+
         const int NUM_CARDS = 6;
 
         for (int player = 0; player < 2; player++)
@@ -1332,27 +1317,39 @@ public class GameManager : MonoBehaviour
                     ownerPlayerID = player
                 };
 
-                CardObject c = InstantiateCardObjectFromPOD(
+                CardObject cardObj = InstantiateCardObjectFromPOD(
                     pod,
                     UIManager.Instance.drawPileTransform.position,
                     CardState.drawPile,
                     player
                 );
 
+                // Mirror top player's cards
+                if (player == 1)
+                {
+                    SpriteRenderer sr = cardObj.GetComponent<SpriteRenderer>();
+                    sr.flipY = true;  // or flipX depending on your desired look
+                }
+
+                // Move animation to assigned slot
                 UIManager.Instance.MoveCard(
-                    c,
+                    cardObj,
                     UIManager.Instance.drawPileTransform,
                     UIManager.Instance.playerHolders[player].playerHandHolders[i],
                     i
                 );
 
-                c.cardPOD.state = CardState.playerHolder;
-                players[player].hand[i] = c.cardPOD;
+                // Update POD
+                cardObj.cardPOD.state = CardState.playerHolder;
+
+                // Store POD inside logical player's hand
+                players[player].hand[i] = cardObj.cardPOD;
             }
         }
 
         Debug.Log("UITest 2-player setup complete!");
     }
+
 
 #region Client-Server
 

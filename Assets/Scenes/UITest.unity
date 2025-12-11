@@ -163,14 +163,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c19d0926a43e9d4d9af443619eb04f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  outlinePrefab: {fileID: 5882609638777571380, guid: a951c8a3a11cdfe43b30babce957e481, type: 3}
   scaleMultiplier: 1.1
   behindOffset: {x: 0, y: 0, z: 1}
-  whiteSprite: {fileID: 3367185850919738249, guid: c1cd830bf6c405d4f8de1762a226bb5d, type: 3}
+  whiteSprite: {fileID: 0}
   selectedScaleMultiplier: 1.25
   darkenColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   playerHolders: []
   drawPileTransform: {fileID: 2108589546}
+  cardSpacing: 1
   moveDuration: 0.35
   moveCurve:
     serializedVersion: 2

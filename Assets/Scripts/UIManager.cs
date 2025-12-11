@@ -11,6 +11,8 @@ public class UIManager : MonoBehaviour
     private CardObject selectedCard = null;
     private GameObject Outline = null;
 
+    [Header("Outline Prefab")]
+    public GameObject outlinePrefab;   // Assign in Inspector
     [Header("Outline Settings")]
     public float scaleMultiplier = 1.10f;
     public Vector3 behindOffset = new Vector3(0f, 0f, 1f);
@@ -29,13 +31,16 @@ public class UIManager : MonoBehaviour
     [Tooltip("Location of the draw pile in the scene.")]
     public Transform drawPileTransform;
 
+    [Header("Card Spacing")]
+    public float cardSpacing = 2.5f;
+
     [Header("Movement Settings")]
     public float moveDuration = 0.35f;               // This affects the movement tween speed
     public AnimationCurve moveCurve = AnimationCurve.EaseInOut(0,0,1,1);
 
     // sorting order control
     public int frontOffset = 1000;
-    public int outlineRelativeOffset = -1;
+    public int outlineRelativeOffset = 999;
 
     private Dictionary<CardObject, int> originalSortingOrders = new Dictionary<CardObject, int>();
     private Dictionary<CardObject, string> originalSortingLayerNames = new Dictionary<CardObject, string>();
@@ -63,6 +68,8 @@ public class UIManager : MonoBehaviour
     {
         if (card == null) return;
         if (selectedCard != null) return;
+        if (card.gameObject.tag == "Invalid") return;
+
         SpriteRenderer originalSR = card.GetComponent<SpriteRenderer>();
         if (originalSR == null)
         {
@@ -70,44 +77,44 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        if (originalSortingOrders.ContainsKey(card))
-            return;
-
-        originalSortingOrders[card] = originalSR.sortingOrder;
-        originalSortingLayerNames[card] = originalSR.sortingLayerName;
-
-        originalSR.sortingOrder = originalSortingOrders[card] + frontOffset;
-
+        // Prevent duplicate outlines
         if (Outline != null)
-        {
             Destroy(Outline);
-            Outline = null;
-        }
 
-        Outline = new GameObject("Outline");
+        // --- Instantiate outline prefab ---
+        Outline = Instantiate(outlinePrefab);
+        Outline.name = "Outline";
+        Outline.tag = "Outline";
+
+        // Parent it to card
         Outline.transform.SetParent(card.transform, true);
+
+        // Position behind card
         Outline.transform.position = card.transform.position + behindOffset;
+
+        // Scale slightly larger
         Outline.transform.localScale = card.transform.localScale * scaleMultiplier;
 
-        SpriteRenderer copySR = Outline.AddComponent<SpriteRenderer>();
 
-        if (whiteSprite != null)
-            copySR.sprite = whiteSprite;
-        else
+
+        // Configure sprite sorting
+        SpriteRenderer outlineSR = Outline.GetComponent<SpriteRenderer>();
+        if (outlineSR != null)
         {
-            copySR.sprite = originalSR.sprite;
-            Debug.LogWarning("CardHoverUIManager: whiteSprite not assigned — using original sprite as fallback.");
+            outlineSR.sortingLayerName = originalSR.sortingLayerName;
+            outlineSR.sortingOrder = 999;
         }
 
-        copySR.color = Color.white;
-        copySR.sortingLayerName = originalSR.sortingLayerName;
-        copySR.sortingOrder = originalSR.sortingOrder + outlineRelativeOffset;
+        // Save original card sorting so we can restore later
+        if (!originalSortingOrders.ContainsKey(card))
+        {
+            originalSortingOrders[card] = originalSR.sortingOrder;
+            originalSortingLayerNames[card] = originalSR.sortingLayerName;
+        }
 
-        foreach (var col in Outline.GetComponents<Collider2D>())
-            col.enabled = false;
-        
+        // Bring card to front
+        originalSR.sortingOrder += frontOffset;
     }
-
     private void DestroyOutline(CardObject card)
     {
         if (card == null)
@@ -116,7 +123,7 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        if (originalSortingOrders.TryGetValue(card, out int originalOrder))
+        if (originalSortingOrders.TryGetValue(card, out int originalOrder) && (card.gameObject.tag != "Selected"))
         {
             SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
             if (sr != null)
@@ -142,6 +149,8 @@ public class UIManager : MonoBehaviour
         foreach (var kv in originalSortingOrders)
         {
             var card = kv.Key;
+            if (card == selectedCard)
+            continue;
             var originalOrder = kv.Value;
             if (card != null)
             {
@@ -177,6 +186,7 @@ public class UIManager : MonoBehaviour
 
     private void SetSelectedCard(CardObject card)
     {
+        if (card.gameObject.tag == "Invalid") return;
         selectedCard = card;
 
         //Scale selected card up
@@ -189,16 +199,57 @@ public class UIManager : MonoBehaviour
             sr.sortingOrder = 5000; 
         }
 
+        //Apply tagging rules
+        ApplySelectionTags(card);
         //Darken every OTHER card
         DarkenAllExcept(card);
 
         //Remove hover copy (hovering makes no sense while selected)
         RestoreAllAndClear();
+
     }
 
+    public void ApplySelectionTags(CardObject selectedCard)
+    {
+        if (selectedCard == null) return;
+
+        int selectedOwner = selectedCard.cardPOD.ownerPlayerID;
+
+        // Loop through all players
+        for (int player = 0; player < GameManager.Instance.players.Length; player++)
+        {
+            PlayerXClient p = GameManager.Instance.players[player];
+            if (p == null || p.hand == null) continue;
+
+            for (int i = 0; i < p.hand.Length; i++)
+            {
+                CardPODClient pod = p.hand[i];
+                if (pod == null || pod.cardObject == null) continue;
+
+                CardObject card = pod.cardObject;
+
+            if (player == selectedOwner)
+            {
+                // Do not change any card already marked as Selected
+                if (card.gameObject.tag == "Selected")
+                    continue;
+
+                if (card == selectedCard)
+                    card.gameObject.tag = "Selected";
+                else
+                    card.gameObject.tag = "Invalid";
+            }
+                else
+                {
+                    // Other players
+                    card.gameObject.tag = "Valid";
+                }
+            }
+        }
+    }
     private void DarkenAllExcept(CardObject keepLit)
     {
-        var allCards = GameObject.FindGameObjectsWithTag("Card");
+        var allCards = GameObject.FindGameObjectsWithTag("Invalid");
 
         foreach (var obj in allCards)
         {
@@ -219,6 +270,7 @@ public class UIManager : MonoBehaviour
     {
         if (selectedCard != null)
         {
+            
             // Restore scale
             selectedCard.transform.localScale = Vector3.one;
 
@@ -232,11 +284,14 @@ public class UIManager : MonoBehaviour
 
         // Reset all card colors
         RestoreAllCardColors();
+        ResetAllCardTags();
+
+        
     }
 
     private void RestoreAllCardColors()
     {
-        var allCards = GameObject.FindGameObjectsWithTag("Card");
+        var allCards = GameObject.FindGameObjectsWithTag("Invalid");
 
         foreach (var obj in allCards)
         {
@@ -244,6 +299,17 @@ public class UIManager : MonoBehaviour
             if (sr != null)
                 sr.color = normalColor;
         }
+
+    }
+
+    private void ResetAllCardTags()
+    {
+        var invalidCards = GameObject.FindGameObjectsWithTag("Invalid");
+        var selectedCards = GameObject.FindGameObjectsWithTag("Selected");
+        foreach (var obj in invalidCards)
+            obj.tag = "Valid";  // Default tag
+        foreach (var obj in selectedCards)
+            obj.tag = "Valid";  // Default tag
     }
 
     public void MoveCard(CardObject card, Transform from, Transform toHolder, int slotIndex = -1)
@@ -320,6 +386,28 @@ public class UIManager : MonoBehaviour
         }
 
         t.position = targetPos; // ensure final exact position
+    }
+
+    public Transform[] GenerateHandSlots(Transform parent, Vector3 localOffset, int numSlots = 6)
+    {
+        Transform[] slots = new Transform[numSlots];
+
+        float half = (numSlots - 1) / 2f;
+
+        for (int i = 0; i < numSlots; i++)
+        {
+            GameObject slot = new GameObject($"HandSlot_{i}");
+            slot.transform.SetParent(parent);
+
+            // Centered offset: positions go from -half to +half
+            float xOffset = (i - half) * cardSpacing;
+
+            slot.transform.localPosition = new Vector3(xOffset, 0f, -0.01f * i) + localOffset;
+
+            slots[i] = slot.transform;
+        }
+
+        return slots;
     }
 }
 
