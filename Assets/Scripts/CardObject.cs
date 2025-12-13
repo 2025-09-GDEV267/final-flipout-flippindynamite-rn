@@ -161,27 +161,7 @@ public class CardObject : MonoBehaviour
 
     public void HighlightCardToggle()
     {
-        if (highlightPrefab == null)
-        {
-            highlightPrefab = Resources.Load<GameObject>("Prefabs/CircleHighlightPF");
-        }
-        if (highlightInstance != null)
-        {
-            Destroy(highlightInstance);
-            highlightInstance = null;
-            return;
-        }
-        highlightInstance = Instantiate(highlightPrefab, this.transform);
-        highlightInstance.transform.localPosition = Vector3.zero; //new Vector3(0, 0, -2f);
-        highlightInstance.transform.localScale = Vector3.one;
-        // Make highlight render in front of the card
-        SpriteRenderer highlightRenderer = highlightInstance.GetComponent<SpriteRenderer>();
-        if (highlightRenderer != null)
-        {
-            highlightRenderer.sortingLayerName = spriteRenderer.sortingLayerName;
-            //highlightRenderer.sortingLayerID = spriteRenderer.sortingLayerID;
-            highlightRenderer.sortingOrder = spriteRenderer.sortingOrder + 1;
-        }
+        return;
     }
 
 }

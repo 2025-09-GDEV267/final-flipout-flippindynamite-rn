@@ -146,7 +146,7 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("GameManager->Start()");
 
-        AudioClip clip = Resources.Load<AudioClip>("Audio/Bloonstheme");
+        AudioClip clip = Resources.Load<AudioClip>("Audio/Bloonstheme"); //CHANGE IN FINAL RELEASE
         if (clip == null)
         {
             Debug.LogError("Failed to load audio clip from Resources folder.");
@@ -217,7 +217,6 @@ public class GameManager : MonoBehaviour
                 break;
             case Scenes.UITest:
                 SceneManager.LoadScene(scenesSO.UITestScene);
-                //currentScene = Scenes.DCExperiments;
                 currentScene = scenesSO.UITestSceneEnum;
                 currentGameState = GameStatus.Playing;
                 break;
@@ -416,7 +415,8 @@ public class GameManager : MonoBehaviour
     // Called when a card is clicked - responds based on player turn, action, etc.
     void OnCardClicked(CardObject card)
     {
-        AudioManager.PlaySoundAt(AudioManager.audioSourcesSO.clickCard, 1f);
+        
+        AudioManager.PlaySoundAt(AudioManager.audioSourcesSO.clickCard, 0.1f);
         Debug.Log("GameManager->OnCardClicked - Card clicked: " + card.gameObject.name + " currentPlayerIndex: " + gameStateServer.GetActivePlayerNumber());
 
         if (card.cardPOD.state == CardState.playerHolder)
@@ -424,7 +424,7 @@ public class GameManager : MonoBehaviour
             Debug.Log("Actions available: " + string.Join(", ", GameStateClient.CurrentGameStateClient.GetAvailableActionsForCard(card.cardPOD)));
             if (cardsHighlighted.Contains(card))
             {
-                card.HighlightCardToggle();
+                UIManager.Instance.ToggleSelection(card);
                 cardsHighlighted.Remove(card);
                 return;
             }
@@ -1074,7 +1074,9 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("GameManager->FlipCard(): Flipping card with cardID " + cardID + " to color " + newColor.ToString());
             //cardToFlip.FlipCard();
+            UIManager.Instance.Squashcard(CardObject);
             cardToFlip.UpdateColor(newColor);
+            UIManager.Instance.Stretchcard(CardObject);
         }
         else
         {

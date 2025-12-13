@@ -21,5 +21,5 @@ public class ScenesSO : ScriptableObject
     public string DCExperimentsScene;
     public Scenes DCExperimentsSceneEnum = Scenes.Game; //Scenes.DCExperiments;
     public string UITestScene;
-    public Scenes UITestSceneEnum = Scenes.UITest; //Scenes.UITest;
+    public Scenes UITestSceneEnum = Scenes.Game;
 }

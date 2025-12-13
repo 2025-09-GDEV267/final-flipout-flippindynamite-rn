@@ -1,0 +1,96 @@
+public void SwapCards1Client(
+    int playerSwappingId,
+    int playerSwapWithId,
+    int cardSwappingID1,
+    int cardSwapWithID1,
+    CardColor swappingNewColor,
+    CardColor swapWithNewColor)
+{
+    PlayerXClient playerA = GameStateClient.CurrentGameStateClient.GetPlayerByID(playerSwappingId);
+    PlayerXClient playerB = GameStateClient.CurrentGameStateClient.GetPlayerByID(playerSwapWithId);
+
+    if (playerA == null || playerB == null)
+    {
+        Debug.LogError("SwapCards1Client: Could not find players.");
+        return;
+    }
+
+    int indexA = playerA.GetIndexOfCardByID(cardSwappingID1);
+    int indexB = playerB.GetIndexOfCardByID(cardSwapWithID1);
+
+    if (indexA == -1 || indexB == -1)
+    {
+        Debug.LogError("SwapCards1Client: Could not find card indices.");
+        return;
+    }
+
+    CardObject cardA = playerA.hand[indexA].cardObject;
+    CardObject cardB = playerB.hand[indexB].cardObject;
+
+    if (cardA == null || cardB == null)
+    {
+        Debug.LogError("SwapCards1Client: One of the cardObjects is missing.");
+        return;
+    }
+
+    // -------------------------------------------------------
+    // 1) UPDATE CARD COLORS IF NEEDED
+    // -------------------------------------------------------
+    if (playerSwappingId != GameStateClient.GetCurrentPlayerId() &&
+        playerSwapWithId != GameStateClient.GetCurrentPlayerId())
+    {
+        cardA.UpdateColor(swappingNewColor);
+        cardB.UpdateColor(swapWithNewColor);
+    }
+
+    // -------------------------------------------------------
+    // 2) BACKEND SWAP (swap POD references)
+    // -------------------------------------------------------
+    CardPODClient tempPOD = playerA.hand[indexA];
+    playerA.hand[indexA] = playerB.hand[indexB];
+    playerB.hand[indexB] = tempPOD;
+
+    // Update POD owner ids
+    playerA.hand[indexA].ownerPlayerID = playerSwappingId;
+    playerB.hand[indexB].ownerPlayerID = playerSwapWithId;
+
+    // -------------------------------------------------------
+    // 3) VISUAL SWAP USING MoveCard()
+    // -------------------------------------------------------
+    Transform slotA = UIManager.Instance.playerHolders[playerSwappingId].playerHandHolders[indexA];
+    Transform slotB = UIManager.Instance.playerHolders[playerSwapWithId].playerHandHolders[indexB];
+
+    // Animate A → B slot
+    UIManager.Instance.MoveCard(
+        cardA,
+        cardA.transform,
+        slotB,
+        indexB
+    );
+
+    // Animate B → A slot
+    UIManager.Instance.MoveCard(
+        cardB,
+        cardB.transform,
+        slotA,
+        indexA
+    );
+
+    // -------------------------------------------------------
+    // 4) UPDATE CardObject's runtime POD link
+    // -------------------------------------------------------
+    playerA.hand[indexA].cardObject = cardA;
+    playerB.hand[indexB].cardObject = cardB;
+
+    // -------------------------------------------------------
+    // 5) UPDATE GAMESTATE
+    // -------------------------------------------------------
+    GameStateClient.CurrentGameStateClient.Swap1CardBetweenPlayers(
+        playerSwappingId,
+        playerSwapWithId,
+        cardSwappingID1,
+        cardSwapWithID1
+    );
+
+    Debug.Log($"SwapCards1Client: Swapped cards between P{playerSwappingId} and P{playerSwapWithId}");
+}
