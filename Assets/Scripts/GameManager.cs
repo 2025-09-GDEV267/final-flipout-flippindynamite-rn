@@ -1204,7 +1204,7 @@ public class GameManager : MonoBehaviour
                 break;
             }
         }
-
+        ExitHighlightMode();
         
     }
 
