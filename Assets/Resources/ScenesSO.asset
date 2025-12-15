@@ -20,7 +20,9 @@ MonoBehaviour:
   OnlineLobbySceneEnum: 3
   gameScene: CoreGame
   gameSceneEnum: 4
-  gameOverScene: GameOverX
+  gameOverScene: ResultsMenu
   gameOverSceneEnum: 5
   DCExperimentsScene: xDCExperiments
   DCExperimentsSceneEnum: 4
+  UITestScene: UITest
+  UITestSceneEnum: 4

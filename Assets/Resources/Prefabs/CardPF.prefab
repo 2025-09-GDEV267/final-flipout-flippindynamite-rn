@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 8555627898555835701}
   - component: {fileID: 5540833359199689919}
   - component: {fileID: 2855832800963578373}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: CardPF
-  m_TagString: Valid
+  m_TagString: Card
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

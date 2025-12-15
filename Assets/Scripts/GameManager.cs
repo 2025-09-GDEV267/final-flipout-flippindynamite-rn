@@ -66,10 +66,6 @@ public class GameManager : MonoBehaviour
     public MultiplayerMode currentMultiplayerMode = MultiplayerMode.Disconnected;    
 
     //[SerializeField] private PlayerX[] players = new PlayerX[5];
-    
-    public int totalPlayers = 0;
-
-    public PlayerXClient[] players;
 
     GameObject playersParentGO = null;
     //private int localPlayer1Index = 0;
@@ -95,6 +91,16 @@ public class GameManager : MonoBehaviour
         new(0, 4, 0)      // Player 5 - Center top (?!!)
     };
     [SerializeField] private Vector3 cardHolderOffset = new Vector3(2.5f, 0, 0);
+
+    private GameObject[] scoreKeeperGO = new GameObject[5];
+    [SerializeField] private TextMeshPro[] scoreText = new TextMeshPro[5];
+
+    public int finalWinningScore = 0;
+    public int finalScoredPlayers = 0;
+    public int finalWinnerPlayerNum = 0;
+    public int[] finalScores = new int[5];
+
+    public string[] finalPlayers = new string[5];
 
 // CARDS
     //private CardManager cardManager;
@@ -131,9 +137,7 @@ public class GameManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);   
-            // Enough room for 2 players (or more later)
-            players = new PlayerXClient[4];     
+            DontDestroyOnLoad(gameObject);        
         }
         else
         {
@@ -146,13 +150,13 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("GameManager->Start()");
 
-        AudioClip clip = Resources.Load<AudioClip>("Audio/Bloonstheme");
+        AudioClip clip = Resources.Load<AudioClip>("Audio/OVS_CorporateVol2BeyontheBlueprintCut30");
         if (clip == null)
         {
             Debug.LogError("Failed to load audio clip from Resources folder.");
             return;
         }
-        AudioManager.Play(clip, 0.01f);
+        AudioManager.Play(clip, 0.25f);
         /*clickSound = Resources.Load<AudioClip>("Audio/OVS_Clicky");
         if (clickSound == null)
         {
@@ -217,7 +221,7 @@ public class GameManager : MonoBehaviour
                 break;
             case Scenes.UITest:
                 SceneManager.LoadScene(scenesSO.UITestScene);
-                //currentScene = Scenes.DCExperiments;
+                //currentScene = Scenes.UITest;
                 currentScene = scenesSO.UITestSceneEnum;
                 currentGameState = GameStatus.Playing;
                 break;
@@ -289,7 +293,7 @@ public class GameManager : MonoBehaviour
             if (currentScene != Scenes.UITest)
             {
                 Debug.Log("currentScene mismatch; currentScene set to " + currentScene.ToString() + "; updating to " + Scenes.UITest.ToString());
-                currentScene = Scenes.UITest; // !!
+                currentScene = Scenes.Game; // !!
                 currentGameState = GameStatus.Playing;
             }
         }
@@ -399,6 +403,10 @@ public class GameManager : MonoBehaviour
             //LoadScene("xDCExperiments");
             LoadScene(Scenes.DCExperiments);
         }
+        else if (Input.GetKeyDown(KeyCode.Z))
+        {
+            EndGameClient(0);
+        }
         // workaround for Start() timing issue (avoiding Script Execution Order change)
         if (currentScene == Scenes.Game && gameStateServer.serverDrawPile != null && !cardsShowing)
         {
@@ -406,12 +414,12 @@ public class GameManager : MonoBehaviour
             //DrawPileDisplayTopCard();
             cardsShowing = true;
         }
-        if (Input.GetKeyDown(KeyCode.O))
-        {
-          StartUITestTwoPlayer();
-        }
     }
 
+    public void SetLocalPlayerName(string name)
+    {
+        GameStateClient.localPlayerName = name;
+    }
 
     // Called when a card is clicked - responds based on player turn, action, etc.
     void OnCardClicked(CardObject card)
@@ -493,6 +501,20 @@ public class GameManager : MonoBehaviour
         Debug.Log("GameManager->StartHotseatGame()");
         Debug.Log("First name: " + playerNames[0]);
 
+        for (int i = 0; i < numPlayers; i++)
+        {
+            scoreKeeperGO[i] = new GameObject("Player" + i + " score");
+            
+            scoreKeeperGO[i].transform.localPosition = playerScorePilePositions[i];            
+            scoreKeeperGO[i].layer = LayerMask.NameToLayer("UI");
+            scoreText[i] = scoreKeeperGO[i].AddComponent<TextMeshPro>();
+            scoreText[i].GetComponent<Renderer>().sortingLayerName = "UI";
+            scoreText[i].GetComponent<Renderer>().sortingOrder = 100; // Optional: set render order
+            scoreText[i].text = "Score: 0";
+            scoreText[i].fontSize = 3;
+            scoreText[i].alignment = TextAlignmentOptions.Center;
+            scoreText[i].color = Color.blue;
+        }
 
         // Player Ids are separate from player numbers but for hotseat they are basically the same
         int[] playerIds = new int[numPlayers];
@@ -500,7 +522,7 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < numPlayers; i++)
         {
             playerIds[i] = i;
-            sessionManager.AddSession(i, playerNames[i], "LocalHost");
+            sessionManager.AddSession((ulong)i, playerNames[i], "LocalHost");
         }
 
         // if (IsHost)
@@ -521,11 +543,8 @@ public class GameManager : MonoBehaviour
         playersParentGO = new GameObject("_Players");
         for (int i = 0; i < numPlayers; i++)
         {
-            GameObject playerGO = new GameObject("Player" + i);
+            GameObject playerGO = new GameObject("Player" + i); //, typeof(PlayerXClient));
             playerGO.transform.SetParent(playersParentGO.transform);
-
-            // (Optional) store these slots somewhere
-            // playerHandSlots[i] = handSlots;
         }
 
         //inputManager.activePlayerId = gameStateServer.GetActivePlayerNumber();
@@ -546,11 +565,24 @@ public class GameManager : MonoBehaviour
 
     #region Methods-dispatched-to
 
-    public void EndGameClient()
+    public void EndGameClient(int playerId)
     {
+        if (currentScene != Scenes.Game)
+        {
+            Debug.LogError("GameManager->EndGameClient(): Not in Game scene!");
+            return;
+        }
+        if (currentGameState != GameStatus.Playing)
+        {
+            Debug.LogError("GameManager->EndGameClient(): Game is not in Playing state!");
+            return;
+        }
+        currentGameState = GameStatus.GameOver;
+        GameStateClient.GatherResults();
         Debug.Log("GameManager->EndGameClient()");
         EndGameCleanup();
-        //LoadScene(Scenes.GameOver);
+
+        LoadScene(Scenes.GameOver);
     }
 
     public void EndTurnClient()
@@ -637,8 +669,11 @@ public class GameManager : MonoBehaviour
         }
         if (uiText != null)
         {
-            uiText.text = "Player " + playerId + "'s " + (playerNum == 1 ? "^" : "v") + " Turn";
+            PlayerXClient player = GameStateClient.CurrentGameStateClient.GetPlayerByNumber(playerId);
+            uiText.text = "Player " + playerId + "'s " + (playerNum == 1 ? "^" : "v") + " (" + player.playerName + ") Turn";
         }
+        UpdateScoresDisplay();
+
         // This should be done at TurnEnd:
         //ClearObjectsInPlay();
 
@@ -809,6 +844,7 @@ public class GameManager : MonoBehaviour
                 Debug.LogError("GameManager->MoveCardsToScorePile(): No card found with cardID " + cardID);
             }
         }
+        UpdateScoresDisplay();
         //this is called along with Score/Swipe to create/queue deal action:
         // GameManager.Instance.serverDispatch.DealCardsToPlayerHandIndices(playerId, handIndices);
     }
@@ -902,8 +938,19 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogError("GameManager->SwipeCardsToScorePiles(): No card found with cardID " + finalCardID);
         }
+
+        UpdateScoresDisplay();
         //this is called along with Score/Swipe to create/queue deal action:
         // GameManager.Instance.serverDispatch.DealCardsToPlayerHandIndices(playerId, handIndices);
+    }
+
+    void UpdateScoresDisplay()
+    {
+        for (int playerNum = 0; playerNum < GameStateClient.GetTotalPlayers(); playerNum++)
+        {
+            PlayerXClient player = GameStateClient.CurrentGameStateClient.GetPlayerByNumber(playerNum);
+            scoreText[playerNum].text = "Score: " + player.scorePile.Count.ToString();
+        }
     }
 
     void BuildScorePile()
@@ -977,67 +1024,29 @@ public class GameManager : MonoBehaviour
     }
 
 
-    private CardObject InstantiateCardObjectFromPOD(
-        CardPODClient pod,
-        Vector3 spawnPosition,
-        CardState newState = CardState.playerHolder,
-        int ownerPlayerID = -1)
+    private CardObject InstantiateCardObjectFromPOD(CardPODClient cardPOD, Vector3 position, CardState newState = CardState.playerHolder, int playerID = -1)
     {
-        // --- Ensure parent exists ---
         if (cardsParentGO == null)
-            cardsParentGO = new GameObject("_Cards");
-
-        // --- Load prefab if needed ---
+        {
+            cardsParentGO = new GameObject("_Cards");            
+        }
         if (cardPrefab == null)
+        {
             cardPrefab = Resources.Load<GameObject>("Prefabs/CardPF");
-
-        if (cardPrefab == null)
-        {
-            Debug.LogError("InstantiateCardObjectFromPOD ERROR: Could not load Prefabs/CardPF");
-            return null;
         }
 
-        // --- Instantiate the GameObject ---
-        GameObject cardGO = Instantiate(
-            cardPrefab,
-            spawnPosition,
-            Quaternion.identity,
-            cardsParentGO.transform
-        );
+        GameObject cardGO = GameObject.Instantiate(cardPrefab, position, Quaternion.identity, cardsParentGO.transform);
+        cardGO.layer = LayerMask.NameToLayer("Cards");
+        CardObject cardObject = cardGO.GetComponent<CardObject>();
 
-        CardObject cardObj = cardGO.GetComponent<CardObject>();
-        if (cardObj == null)
-        {
-            Debug.LogError("Card prefab is missing CardObject component!");
-            return null;
-        }
+        // Attach Card POD to CardObject
+        cardPOD.state = newState;
+        cardPOD.ownerPlayerID = playerID;
+        cardObject.SetCardPOD(cardPOD);
 
-        // --- Assign POD data ---
-        pod.state = newState;
-        pod.ownerPlayerID = ownerPlayerID;
-        pod.cardObject = cardObj;
-        pod.cardGO = cardGO;
+        cardsInPlay.Add(cardObject);
 
-        // The CardObject has its own method that copies POD data into visuals
-        cardObj.SetCardPOD(pod);
-
-        // --- DEFAULT VISUAL CONFIGURATION ---
-        SpriteRenderer sr = cardGO.GetComponent<SpriteRenderer>();
-        
-        // --- ASSIGN CARD VALID TAG ---
-        cardGO.tag = "Valid";
-        
-        if (sr != null)
-        {
-            sr.sortingOrder = 0;
-            sr.color = Color.white;
-        }
-
-        // --- Track card for cleanup ---
-        if (cardsInPlay != null)
-            cardsInPlay.Add(cardObj);
-
-        return cardObj;
+        return cardObject;
     }
 
 
@@ -1241,114 +1250,6 @@ public class GameManager : MonoBehaviour
 
 #endregion
 
-    private UIHolder CreateUIHolder(string name)
-    {
-        UIHolder holder = new UIHolder();
-
-        holder.playerHandHolders = new Transform[6];
-        holder.playerScoreHolders = new Transform[6];
-        holder.slots = new Transform[6];
-
-        holder.drawPileHolder = new GameObject(name + "_DrawPileAnchor").transform;
-
-        return holder;
-    }
-
-
-    private void StartUITestTwoPlayer()
-    {
-        Debug.Log("UITest: Initializing 2-player test");
-
-        //Create UIHolder array (2 players)
-        UIManager.Instance.playerHolders = new UIHolder[2];
-        UIManager.Instance.playerHolders[0] = CreateUIHolder("P0_UIHolder");
-        UIManager.Instance.playerHolders[1] = CreateUIHolder("P1_UIHolder");
-
-        //Create Player GameObjects (for transform positions)
-        playersParentGO = new GameObject("_Players");
-
-        GameObject p0 = new GameObject("Player0");
-        p0.transform.SetParent(playersParentGO.transform);
-        p0.transform.position = new Vector3(0f, -3.5f, 0f);  // Bottom center
-
-        GameObject p1 = new GameObject("Player1");
-        p1.transform.SetParent(playersParentGO.transform);
-        p1.transform.position = new Vector3(0f, 3.5f, 0f);   // Top center
-
-        //Create logical data-only players
-        players = new PlayerXClient[2];
-        players[0] = new PlayerXClient { playerId = 0, playerName = "P0" };
-        players[1] = new PlayerXClient { playerId = 1, playerName = "P1" };
-
-        //Assign roots for each UIHolder
-        UIManager.Instance.playerHolders[0].holderRoot = p0.transform;
-        UIManager.Instance.playerHolders[1].holderRoot = p1.transform;
-
-
-        //Generate hand slot transforms using UIManager
-
-        UIManager.Instance.playerHolders[0].playerHandHolders =
-            UIManager.Instance.GenerateHandSlots(p0.transform, Vector3.zero, 6);
-
-        UIManager.Instance.playerHolders[1].playerHandHolders =
-            UIManager.Instance.GenerateHandSlots(p1.transform, Vector3.zero, 6);
-
-        // Compatibility alias for MoveCard()
-        UIManager.Instance.playerHolders[0].slots =
-            UIManager.Instance.playerHolders[0].playerHandHolders;
-
-        UIManager.Instance.playerHolders[1].slots =
-            UIManager.Instance.playerHolders[1].playerHandHolders;
-
-
-        //Deal 6 cards to each player
-
-        const int NUM_CARDS = 6;
-
-        for (int player = 0; player < 2; player++)
-        {
-            for (int i = 0; i < NUM_CARDS; i++)
-            {
-                CardPODClient pod = new CardPODClient
-                {
-                    cardID = UnityEngine.Random.Range(0, 999999),
-                    color = (CardColor)UnityEngine.Random.Range(0, 5),
-                    state = CardState.drawPile,
-                    ownerPlayerID = player
-                };
-
-                CardObject cardObj = InstantiateCardObjectFromPOD(
-                    pod,
-                    UIManager.Instance.drawPileTransform.position,
-                    CardState.drawPile,
-                    player
-                );
-
-                // Mirror top player's cards
-                if (player == 1)
-                {
-                    SpriteRenderer sr = cardObj.GetComponent<SpriteRenderer>();
-                    sr.flipY = true;  // or flipX depending on your desired look
-                }
-
-                // Move animation to assigned slot
-                UIManager.Instance.MoveCard(
-                    cardObj,
-                    UIManager.Instance.drawPileTransform,
-                    UIManager.Instance.playerHolders[player].playerHandHolders[i],
-                    i
-                );
-
-                // Update POD
-                cardObj.cardPOD.state = CardState.playerHolder;
-
-                // Store POD inside logical player's hand
-                players[player].hand[i] = cardObj.cardPOD;
-            }
-        }
-
-        Debug.Log("UITest 2-player setup complete!");
-    }
 
 
 #region Client-Server
