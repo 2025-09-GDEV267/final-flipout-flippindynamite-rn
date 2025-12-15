@@ -1,2 +1,16 @@
 fileFormatVersion: 2
 guid: 0c19d0926a43e9d4d9af443619eb04f5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - outlinePrefab: {fileID: 5882609638777571380, guid: a951c8a3a11cdfe43b30babce957e481, type: 3}
+  - whiteSprite: {instanceID: 0}
+  - drawPileTransform: {instanceID: 0}
+  - actionMenuPrefab: {fileID: 2992186066527857440, guid: cfb885197cd8351498a1f69c18343e07, type: 3}
+  - leftactionMenuPrefab: {fileID: 2992186066527857440, guid: 644674e19618ab14b9aaf1e8b58e4031, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

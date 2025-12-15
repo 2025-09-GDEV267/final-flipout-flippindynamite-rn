@@ -26,6 +26,7 @@ public class CardObject : MonoBehaviour
 
     private static GameObject highlightPrefab = null;
     private GameObject highlightInstance = null;
+    public bool isHighlighted = false;
 
     public void Awake()
     {
@@ -159,29 +160,21 @@ public class CardObject : MonoBehaviour
         gameObject.transform.localScale = scale;
     }
 
-    public static event System.Action<CardObject> OnHoverEnter;
-    public static event System.Action<CardObject> OnHoverExit;
     
-    private void OnMouseEnter()
-    {
-    OnHoverEnter?.Invoke(this);
-    }
-
-    private void OnMouseExit()
-    {
-    OnHoverExit?.Invoke(this);
-    }
 
     public void HighlightCardToggle()
     {
+        
         if (highlightPrefab == null)
         {
             highlightPrefab = Resources.Load<GameObject>("Prefabs/CircleHighlightPF");
+            isHighlighted = true;
         }
         if (highlightInstance != null)
         {
             Destroy(highlightInstance);
             highlightInstance = null;
+            isHighlighted = false;
             return;
         }
         highlightInstance = Instantiate(highlightPrefab, this.transform);
@@ -191,10 +184,47 @@ public class CardObject : MonoBehaviour
         SpriteRenderer highlightRenderer = highlightInstance.GetComponent<SpriteRenderer>();
         if (highlightRenderer != null)
         {
+
             highlightRenderer.sortingLayerName = spriteRenderer.sortingLayerName;
             //highlightRenderer.sortingLayerID = spriteRenderer.sortingLayerID;
             highlightRenderer.sortingOrder = spriteRenderer.sortingOrder + 1;
         }
     }
 
+        public void SetHighlightCard(bool isHighlighted)
+    {
+        if (!isHighlighted)
+        {
+            if (highlightInstance != null)
+            {
+                Destroy(highlightInstance);
+                highlightInstance = null;
+            }
+            return;
+        }
+
+        if (highlightInstance != null)
+            return;
+
+        if (highlightPrefab == null)
+        {
+            highlightPrefab = Resources.Load<GameObject>("Prefabs/CircleHighlightPF");
+            if (highlightPrefab == null)
+            {
+                Debug.LogError("CircleHighlightPF prefab not found!");
+                return;
+            }
+        }
+
+        highlightInstance = Instantiate(highlightPrefab, transform);
+        highlightInstance.transform.localPosition = Vector3.zero;
+        highlightInstance.transform.localScale = Vector3.one;
+
+        SpriteRenderer highlightRenderer = highlightInstance.GetComponent<SpriteRenderer>();
+        if (highlightRenderer != null && spriteRenderer != null)
+        {
+            highlightRenderer.sortingLayerName = spriteRenderer.sortingLayerName;
+            highlightRenderer.sortingOrder = spriteRenderer.sortingOrder + 1;
+        }
+    }
 }

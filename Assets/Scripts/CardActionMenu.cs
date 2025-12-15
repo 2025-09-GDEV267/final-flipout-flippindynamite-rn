@@ -2,15 +2,16 @@ using UnityEngine;
 
 public class CardActionMenu : MonoBehaviour
 {
-    public CardObject ownerCard;
+    public CardObject OwnerCard { get; private set; }
 
     public void Initialize(CardObject card)
     {
-        ownerCard = card;
-    }
+        OwnerCard = card;
 
-    public void OnActionClicked()
-    {
-      return;
+        // Propagate to buttons
+        foreach (ActionButton button in GetComponentsInChildren<ActionButton>())
+        {
+            button.SetOwnerCard(card);
+        }
     }
 }

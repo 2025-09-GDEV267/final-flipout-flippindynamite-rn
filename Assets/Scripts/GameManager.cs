@@ -41,12 +41,33 @@ public enum GameStatus
     Online
  };
 
+public enum CardActionType
+{
+    Flip,
+    Switch,
+    Swap1,
+    Swap2,
+    Score,
+    Swipe
+}
+
+public struct CardActionRequest
+{
+    public CardActionType actionType;
+    public CardObject sourceCard;
+}
+
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    //Select a canvas in inspector to be the parent for almost all UI Instances (ScoreCount, Turn Indicator, Avatars, etc.)
+    public GameObject UICanvas;
+
     public InputManager inputManager;
     //AudioClip clickSound;
+
+    public bool IsInHighlightMode = false;
 
     [SerializeField] private PlayerSessionManager sessionManager = new PlayerSessionManager();
     [SerializeField] public GameStateServer gameStateServer = new GameStateServer();
@@ -64,6 +85,8 @@ public class GameManager : MonoBehaviour
     public Scenes currentScene = Scenes.LoadingScreen;
 
     public MultiplayerMode currentMultiplayerMode = MultiplayerMode.Disconnected;    
+
+    
 
     //[SerializeField] private PlayerX[] players = new PlayerX[5];
 
@@ -150,13 +173,13 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("GameManager->Start()");
 
-        AudioClip clip = Resources.Load<AudioClip>("Audio/OVS_CorporateVol2BeyontheBlueprintCut30");
+        AudioClip clip = Resources.Load<AudioClip>("Audio/Bloonstheme");
         if (clip == null)
         {
             Debug.LogError("Failed to load audio clip from Resources folder.");
             return;
         }
-        AudioManager.Play(clip, 0.25f);
+        AudioManager.Play(clip, 0.05f);
         /*clickSound = Resources.Load<AudioClip>("Audio/OVS_Clicky");
         if (clickSound == null)
         {
@@ -424,30 +447,25 @@ public class GameManager : MonoBehaviour
     // Called when a card is clicked - responds based on player turn, action, etc.
     void OnCardClicked(CardObject card)
     {
-        AudioManager.PlaySoundAt(AudioManager.audioSourcesSO.clickCard, 1f);
-        Debug.Log("GameManager->OnCardClicked - Card clicked: " + card.gameObject.name + " currentPlayerIndex: " + gameStateServer.GetActivePlayerNumber());
+        if (!IsInHighlightMode)
+           return;
 
-        if (card.cardPOD.state == CardState.playerHolder)
-        {
-            Debug.Log("Actions available: " + string.Join(", ", GameStateClient.CurrentGameStateClient.GetAvailableActionsForCard(card.cardPOD)));
+
             if (cardsHighlighted.Contains(card))
             {
                 card.HighlightCardToggle();
                 cardsHighlighted.Remove(card);
                 return;
             }
-            else {
+            else 
+            {
                 card.HighlightCardToggle();
                 cardsHighlighted.Add(card);
             }
-        }
-        else if (card.cardPOD.state == CardState.scorePile)
+
+        if (cardsHighlighted.Count == GetRequiredHighlightCount(pendingAction))
         {
-            Debug.Log("Score pile count: " + GameStateClient.CurrentGameStateClient.GetPlayerByID(card.cardPOD.ownerPlayerID).scorePile.Count);
-        }
-        else {
-            Debug.Log("Max run player 0: " + GameStateClient.GetTotalAdjacentColorCount(GameStateClient.CurrentGameStateClient.GetPlayerByNumber(0)));
-            Debug.Log("Max run player 1: " + GameStateClient.GetTotalAdjacentColorCount(GameStateClient.CurrentGameStateClient.GetPlayerByNumber(1)));
+            ExecutePendingAction();
         }
     }
 
@@ -503,17 +521,19 @@ public class GameManager : MonoBehaviour
 
         for (int i = 0; i < numPlayers; i++)
         {
-            scoreKeeperGO[i] = new GameObject("Player" + i + " score");
-            
-            scoreKeeperGO[i].transform.localPosition = playerScorePilePositions[i];            
+            scoreKeeperGO[i] = new GameObject($"Player{i}_Score", typeof(RectTransform));
+            // IMPORTANT: false keeps local UI coordinates correct
+            scoreKeeperGO[i].transform.SetParent(UICanvas.transform, false);
+            RectTransform rt = scoreKeeperGO[i].GetComponent<RectTransform>();
+            // Use anchoredPosition for UI placement
+            rt.anchoredPosition = playerScorePilePositions[i];
+            rt.localScale = Vector3.one;
             scoreKeeperGO[i].layer = LayerMask.NameToLayer("UI");
             scoreText[i] = scoreKeeperGO[i].AddComponent<TextMeshPro>();
-            scoreText[i].GetComponent<Renderer>().sortingLayerName = "UI";
-            scoreText[i].GetComponent<Renderer>().sortingOrder = 100; // Optional: set render order
             scoreText[i].text = "Score: 0";
             scoreText[i].fontSize = 3;
             scoreText[i].alignment = TextAlignmentOptions.Center;
-            scoreText[i].color = Color.blue;
+            scoreText[i].color = Color.white;
         }
 
         // Player Ids are separate from player numbers but for hotseat they are basically the same
@@ -722,6 +742,7 @@ public class GameManager : MonoBehaviour
         else
         {
             drawPileTop.SetCardPOD(topPOD);
+            drawPileTop.transform.localScale = new Vector3(0.5f, 0.5f, 1);
             drawPileTop.cardPOD.state = CardState.drawPile;
         }
         return;
@@ -1056,6 +1077,149 @@ public class GameManager : MonoBehaviour
     }
 
 
+#endregion
+#region  Actions
+
+    public void HandleCardActionRequest(CardActionRequest request)
+    {
+        Debug.Log($"Action requested: {request.actionType} from {request.sourceCard.name}");
+
+        pendingAction = request.actionType;
+        actionSourceCard = request.sourceCard;
+
+        UIManager.Instance.HideActionMenu();
+        if (pendingAction != CardActionType.Flip)
+        {
+            EnterHighlightMode();          
+        }
+        else
+        {
+            switch (request.actionType)
+            {
+                case CardActionType.Flip:
+                {
+                    CardObject card = request.sourceCard;
+                    CardColor newColor = FakeFlipColor(card.cardPOD.color);
+
+                    FlipCardClient(card.cardPOD.cardID, newColor);
+                    break;
+                }
+
+                case CardActionType.Score:
+                {
+                    // Optional if Score is 1-card
+                    break;
+                }
+            }
+        }
+    
+    }
+
+    void OnEnable()
+    {
+        UISignals.OnCardActionRequested += HandleCardActionRequest;
+    }
+
+    void OnDisable()
+    {
+        UISignals.OnCardActionRequested -= HandleCardActionRequest;
+    }
+
+    private CardActionType pendingAction;
+    private CardObject actionSourceCard;
+
+
+
+    int GetRequiredHighlightCount(CardActionType action)
+    {
+        switch (action)
+        {
+            case CardActionType.Flip:   return 1;
+            case CardActionType.Switch: return 2;
+            case CardActionType.Swap1:  return 2;
+            case CardActionType.Swap2:  return 4;
+            case CardActionType.Score:  return 1;
+            case CardActionType.Swipe:  return 2;
+            default: return 0;
+        }
+    }
+
+    void EnterHighlightMode()
+    {
+        IsInHighlightMode = true;
+        cardsHighlighted.Clear();
+
+        // Always highlight the source card
+        cardsHighlighted.Add(actionSourceCard);
+    }
+
+    CardColor FakeFlipColor(CardColor current)
+    {
+        return current switch
+        {
+            CardColor.red => CardColor.green,
+            CardColor.green => CardColor.blue,
+            CardColor.blue => CardColor.purple,
+            CardColor.purple => CardColor.yellow,
+            CardColor.yellow => CardColor.red,
+            _ => CardColor.invalid
+        };
+    }
+
+    void ExecutePendingAction()
+    {
+        switch (pendingAction)
+        {
+            case CardActionType.Flip:
+            {
+                CardObject card = cardsHighlighted[0];
+                CardColor newColor = FakeFlipColor(card.cardPOD.color);
+                FlipCardClient(card.cardPOD.cardID, newColor);
+                break;
+            }
+
+            case CardActionType.Switch:
+            {
+                GameManager.Instance.SwitchCardsClient(cardsHighlighted[0].cardPOD.cardID, cardsHighlighted[1].cardPOD.cardID);
+                break;
+            }
+            
+            case CardActionType.Swap1:
+            {
+                break;
+            }
+
+            case CardActionType.Swap2:
+            {
+                break;
+            }
+
+            case CardActionType.Score:
+            {
+                break;
+            }
+
+            case CardActionType.Score:
+            {
+                break;
+            }
+        }
+
+        
+    }
+
+
+    void ExitHighlightMode()
+    {
+        foreach (var card in cardsHighlighted)
+            card.HighlightCardToggle();
+
+        cardsHighlighted.Clear();
+        IsInHighlightMode = false;
+        pendingAction = default;
+        actionSourceCard = null;
+    }
+
     public void FlipCardClient(int cardID, CardColor newColor)
     {
         // Find the CardObject with the given cardID
@@ -1083,16 +1247,18 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("GameManager->FlipCard(): Flipping card with cardID " + cardID + " to color " + newColor.ToString());
             //cardToFlip.FlipCard();
-            cardToFlip.UpdateColor(newColor);
+            
         }
         else
         {
             Debug.LogError("GameManager->FlipCard(): No card found with cardID " + cardID);
         }
+        cardToFlip.UpdateColor(newColor);
     }
 
     public void SwitchCardsClient(int cardID1, int cardID2)
     {
+        Debug.Log("Switch Cards Started");
         // Find the CardObjects with the given cardIDs
         CardObject card1 = null;
         CardObject card2 = null;

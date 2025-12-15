@@ -1,2 +1,15 @@
 fileFormatVersion: 2
 guid: 5b4d52e112a8b534bbb499311aa076ef
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - UICanvas: {fileID: 1428516540871346005, guid: f029f21be5777484f8f8f0da1cf4f637, type: 3}
+  - inputManager: {instanceID: 0}
+  - drawPileTop: {instanceID: 0}
+  - uiText: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

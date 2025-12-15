@@ -19,7 +19,7 @@ public class UIManager : MonoBehaviour
     [Tooltip("Sprite used for the white silhouette")]
     public Sprite whiteSprite;
 
-    [Header("Selected Settings")]
+    [Header("selected Settings")]
     public float selectedScaleMultiplier = 1.25f;
     public Color darkenColor = new Color(0.4f, 0.4f, 0.4f, 1f);
     public Color normalColor = Color.white;
@@ -38,12 +38,20 @@ public class UIManager : MonoBehaviour
     public float moveDuration = 0.35f;               // This affects the movement tween speed
     public AnimationCurve moveCurve = AnimationCurve.EaseInOut(0,0,1,1);
 
+    [Header("Action Menu")]
+    public GameObject actionMenuPrefab;
+    public Vector3 actionMenuOffset = new Vector3(3f, 0f, 0f);
+
+    public GameObject leftactionMenuPrefab;
+    public Vector3 leftactionMenuOffset = new Vector3(-3f, 0f, 0f);
+    private GameObject activeActionMenu;
     // sorting order control
     public int frontOffset = 1000;
     public int outlineRelativeOffset = 999;
 
     private Dictionary<CardObject, int> originalSortingOrders = new Dictionary<CardObject, int>();
     private Dictionary<CardObject, string> originalSortingLayerNames = new Dictionary<CardObject, string>();
+    private Dictionary<CardObject, Vector3> originalScale = new Dictionary<CardObject, Vector3>();
 
     void Awake()
     {
@@ -64,11 +72,47 @@ public class UIManager : MonoBehaviour
         CardObject.onCardClicked -= ToggleSelection;
     }
 
+    void Update()
+    {
+        if (selectedCard == null || activeActionMenu == null)
+            return;
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (!IsClickOnSelectedCardOrMenu())
+            {
+                ClearSelection();
+            }
+        }
+    }
+
+    //This checks if the player clicked off a menu. If they did, the action menu closes.
+    private bool IsClickOnSelectedCardOrMenu()
+    {
+        Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        Vector2 point = new Vector2(mouseWorld.x, mouseWorld.y);
+
+        // Check selected card
+        Collider2D cardCol = selectedCard.GetComponent<Collider2D>();
+        if (cardCol != null && cardCol.OverlapPoint(point))
+            return true;
+
+        // Check menu and its children
+        Collider2D[] menuColliders = activeActionMenu.GetComponentsInChildren<Collider2D>();
+        foreach (var col in menuColliders)
+        {
+            if (col.OverlapPoint(point))
+                return true;
+        }
+
+        return false;
+    }
+
     private void CreateOutline(CardObject card)
     {
         if (card == null) return;
         if (selectedCard != null) return;
-        if (card.gameObject.tag == "Invalid") return;
+        if (card.gameObject.tag == "invalid") return;
 
         SpriteRenderer originalSR = card.GetComponent<SpriteRenderer>();
         if (originalSR == null)
@@ -123,7 +167,7 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        if (originalSortingOrders.TryGetValue(card, out int originalOrder) && (card.gameObject.tag != "Selected"))
+        if (originalSortingOrders.TryGetValue(card, out int originalOrder) && (card.gameObject.tag != "selected"))
         {
             SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
             if (sr != null)
@@ -179,25 +223,39 @@ public class UIManager : MonoBehaviour
             ClearSelection();
             return;
         }
-
+    
+    if(GameManager.Instance.IsInHighlightMode != true)
     // Selecting a new card
-    SetSelectedCard(card);
+    SetselectedCard(card);
     }
 
-    private void SetSelectedCard(CardObject card)
+    public void ToggleSelectionExternal(CardObject card)
     {
-        if (card.gameObject.tag == "Invalid") return;
-        selectedCard = card;
+        ToggleSelection(card);
+        Debug.Log("Selection Toggle Activated");
+    }
 
+
+    private void SetselectedCard(CardObject card)
+    {
+        if (card.gameObject.tag == "invalid") return;
+        selectedCard = card;
+        if (!originalScale.ContainsKey(card))
+            {
+                originalScale[card] = card.transform.localScale;
+            }    
         //Scale selected card up
         SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
         if (sr != null)
         {
+ 
             card.transform.localScale = Vector3.one * selectedScaleMultiplier;
 
             //Bring to front
             sr.sortingOrder = 5000; 
         }
+
+        ShowActionMenu(card);
 
         //Apply tagging rules
         ApplySelectionTags(card);
@@ -211,45 +269,59 @@ public class UIManager : MonoBehaviour
 
     public void ApplySelectionTags(CardObject selectedCard)
     {
-        if (selectedCard == null) return;
+        if (selectedCard == null)
+            return;
 
-        int selectedOwner = selectedCard.cardPOD.ownerPlayerID;
+        int selectedOwnerId = selectedCard.cardPOD.ownerPlayerID;
 
-        // Loop through all players
-        for (int player = 0; player < GameManager.Instance.players.Length; player++)
+        GameStateClient gameState = GameStateClient.CurrentGameStateClient;
+        if (gameState == null)
+            return;
+
+        int totalPlayers = GameStateClient.GetTotalPlayers();
+
+        for (int playerNum = 0; playerNum < totalPlayers; playerNum++)
         {
-            PlayerXClient p = GameManager.Instance.players[player];
-            if (p == null || p.hand == null) continue;
+            PlayerXClient player = gameState.GetPlayerByNumber(playerNum);
+            if (player == null || player.hand == null)
+                continue;
 
-            for (int i = 0; i < p.hand.Length; i++)
+            bool isselectedPlayersHand = player.playerId == selectedOwnerId;
+
+            for (int i = 0; i < player.hand.Length; i++)
             {
-                CardPODClient pod = p.hand[i];
-                if (pod == null || pod.cardObject == null) continue;
+                CardPODClient pod = player.hand[i];
+                if (pod == null || pod.cardObject == null)
+                    continue;
 
                 CardObject card = pod.cardObject;
 
-            if (player == selectedOwner)
-            {
-                // Do not change any card already marked as Selected
-                if (card.gameObject.tag == "Selected")
-                    continue;
-
-                if (card == selectedCard)
-                    card.gameObject.tag = "Selected";
-                else
-                    card.gameObject.tag = "Invalid";
-            }
+                if (isselectedPlayersHand)
+                {
+                    // Same player's hand
+                    if (card == selectedCard)
+                    {
+                        card.gameObject.tag = "selected";
+                    }
+                    else
+                    {
+                        // Do NOT override selected
+                        if (card.gameObject.tag != "selected")
+                            card.gameObject.tag = "invalid";
+                    }
+                }
                 else
                 {
-                    // Other players
-                    card.gameObject.tag = "Valid";
+                    // Other players' cards
+                    card.gameObject.tag = "valid";
                 }
             }
         }
     }
+
     private void DarkenAllExcept(CardObject keepLit)
     {
-        var allCards = GameObject.FindGameObjectsWithTag("Invalid");
+        var allCards = GameObject.FindGameObjectsWithTag("invalid");
 
         foreach (var obj in allCards)
         {
@@ -266,15 +338,23 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    private void RestoreScale()
+    {
+        if (selectedCard == null)
+            return;
+
+        if (originalScale.TryGetValue(selectedCard, out Vector3 original))
+        {
+            selectedCard.transform.localScale = original;
+        }
+    }
+
     private void ClearSelection()
     {
         if (selectedCard != null)
         {
-            
-            // Restore scale
-            selectedCard.transform.localScale = Vector3.one;
+            RestoreScale();
 
-            // Restore sorting order
             SpriteRenderer sr = selectedCard.GetComponent<SpriteRenderer>();
             if (sr != null)
                 sr.sortingOrder = 0;
@@ -282,16 +362,20 @@ public class UIManager : MonoBehaviour
 
         selectedCard = null;
 
-        // Reset all card colors
+        HideActionMenu();
         RestoreAllCardColors();
         ResetAllCardTags();
-
         
+    if (GameManager.Instance != null)
+        {
+            GameManager.Instance.ClearHighlightedCards();
+            Debug.Log("Cleared Highlighted Cards");
+        }
     }
 
     private void RestoreAllCardColors()
     {
-        var allCards = GameObject.FindGameObjectsWithTag("Invalid");
+        var allCards = GameObject.FindGameObjectsWithTag("invalid");
 
         foreach (var obj in allCards)
         {
@@ -304,12 +388,12 @@ public class UIManager : MonoBehaviour
 
     private void ResetAllCardTags()
     {
-        var invalidCards = GameObject.FindGameObjectsWithTag("Invalid");
-        var selectedCards = GameObject.FindGameObjectsWithTag("Selected");
+        var invalidCards = GameObject.FindGameObjectsWithTag("invalid");
+        var selectedCards = GameObject.FindGameObjectsWithTag("selected");
         foreach (var obj in invalidCards)
-            obj.tag = "Valid";  // Default tag
+            obj.tag = "valid";  // Default tag
         foreach (var obj in selectedCards)
-            obj.tag = "Valid";  // Default tag
+            obj.tag = "valid";  // Default tag
     }
 
     public void MoveCard(CardObject card, Transform from, Transform toHolder, int slotIndex = -1)
@@ -392,6 +476,7 @@ public class UIManager : MonoBehaviour
     {
         Transform[] slots = new Transform[numSlots];
 
+        
         float half = (numSlots - 1) / 2f;
 
         for (int i = 0; i < numSlots; i++)
@@ -409,7 +494,85 @@ public class UIManager : MonoBehaviour
 
         return slots;
     }
+
+    private void ShowActionMenu(CardObject card)
+    {
+        PlayerXClient player =
+            GameStateClient.CurrentGameStateClient
+                .GetPlayerByID(card.cardPOD.ownerPlayerID);
+
+        if (player == null) return;
+        HideActionMenu();
+        int slotIndex = player.GetIndexOfCardByID(card.cardPOD.cardID);
+
+        if (slotIndex == 4 || slotIndex == 5)
+        {
+        activeActionMenu = Instantiate(leftactionMenuPrefab);
+        activeActionMenu.name = "CardActionMenu";
+
+        // Parent to card so it follows movement
+        activeActionMenu.transform.SetParent(card.transform, false);
+
+        // Position it to the RIGHT of the card
+        activeActionMenu.transform.localPosition = leftactionMenuOffset;
+
+        // Sorting: above outline, below card
+        SpriteRenderer[] renderers = activeActionMenu.GetComponentsInChildren<SpriteRenderer>();
+        foreach (var r in renderers)
+        {
+            r.sortingOrder = card.GetComponent<SpriteRenderer>().sortingOrder - 1;
+        }
+        CardActionMenu menu = activeActionMenu.GetComponent<CardActionMenu>();
+        menu.Initialize(card);
+        if (activeActionMenu == null)
+        {
+            Debug.LogWarning("DID NOT CREATE MENU");
+        }
+        else
+        {
+            Debug.Log("Menu Created!");
+        }
+        }
+        else
+        {        
+        activeActionMenu = Instantiate(actionMenuPrefab);
+        activeActionMenu.name = "CardActionMenu";
+
+        // Parent to card so it follows movement
+        activeActionMenu.transform.SetParent(card.transform, false);
+
+        // Position it to the RIGHT of the card
+        activeActionMenu.transform.localPosition = actionMenuOffset;
+
+        // Sorting: above outline, below card
+        SpriteRenderer[] renderers = activeActionMenu.GetComponentsInChildren<SpriteRenderer>();
+        foreach (var r in renderers)
+        {
+            r.sortingOrder = card.GetComponent<SpriteRenderer>().sortingOrder - 1;
+        }
+        CardActionMenu menu = activeActionMenu.GetComponent<CardActionMenu>();
+        menu.Initialize(card);
+        if (activeActionMenu == null)
+        {
+            Debug.LogWarning("DID NOT CREATE MENU");
+        }
+        else
+        {
+            Debug.Log("Menu Created!");
+        }
+        }
+    }
+
+    public void HideActionMenu()
+    {
+        if (activeActionMenu != null)
+        {
+            Destroy(activeActionMenu);
+            activeActionMenu = null;
+        }
+    }
 }
+
 
 [System.Serializable]
 public class UIHolder
