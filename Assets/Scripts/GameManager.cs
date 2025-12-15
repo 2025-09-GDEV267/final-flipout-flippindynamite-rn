@@ -180,7 +180,7 @@ public class GameManager : NetworkBehaviour
     {
         if (IsServer)
         {
-            creatDeck();
+            createDeck();
             dealOut();
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
@@ -250,7 +250,7 @@ public class GameManager : NetworkBehaviour
         Hands = newHands;
     }
 
-    public void creatDeck()
+    public void createDeck()
     {
         if (!IsServer) return;
 
