@@ -1,9 +1,15 @@
 using UnityEngine;
 using Unity.Netcode;
 using System;
-using NUnit.Framework;
+using System.Collections.Generic;
+
 public class GameManager : NetworkBehaviour
 {
+
+    public NetworkVariable<ulong> whosTurn;
+
+    List<Player> playerIds = new List<Player>();
+
     public NetworkList<Card> NetworkDeck;
 
     public NetworkList<Card> NetworkDiscard;
@@ -24,8 +30,68 @@ public class GameManager : NetworkBehaviour
         }
 
         NetworkDeck = new NetworkList<Card>();
+        NetworkDiscard = new NetworkList<Card>();
         instance = this;
         DontDestroyOnLoad(gameObject);
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+
+        if (IsServer)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+        }
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        if (!IsServer) return;
+
+        Player newPlayer;
+
+        newPlayer.Id = clientId;
+
+        newPlayer.hand = playerIds.Count;
+
+        playerIds.Add(newPlayer);
+
+        if (whosTurn.Value == ulong.MaxValue)
+        {
+            whosTurn.Value = clientId;
+        }
+
+        // Update all clients with the player list
+        UpdatePlayerListClientRpc(playerIds.ToArray());
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        if (!IsServer) return;
+
+        Player player = new Player();
+
+        foreach (Player p in playerIds)
+        {
+            if (p.Id == clientId)
+            {
+                player = p;
+            }
+        }
+
+        playerIds.Remove(player);
+
+        // If the disconnected player was the current turn holder
+        if (whosTurn.Value == clientId && playerIds.Count > 0)
+        {
+            int nextIndex = 0; // Or implement your turn order logic
+            whosTurn.Value = playerIds[nextIndex].Id;
+        }
+
+        // Update player list
+        UpdatePlayerListClientRpc(playerIds.ToArray());
     }
 
     //Makes a new NetworkVarible of type Card (see def) called randomValues and then sets the read perms to everyone and the writing perms to only the server
@@ -47,6 +113,21 @@ public class GameManager : NetworkBehaviour
     //creates a new Card struct that extends INetworkSerializable
 
     //We make a struct instead of a Class because a class is a reference type i ~think~ either way if we're storing a bunch of values this is how
+    public struct Player : INetworkSerializable, IEquatable<Player>
+    {
+        public ulong Id;
+        public int hand;
+
+        public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+        {
+            serializer.SerializeValue(ref Id);
+            serializer.SerializeValue(ref hand);
+        }
+        public bool Equals(Player other)
+        {
+            return Id == other.Id && hand == other.hand;
+        }
+    }
     public struct Card : INetworkSerializable, IEquatable<Card>
     {
         //0 Blue,1 Purple,2 Green, 3 Yellow, 4 Red
@@ -101,6 +182,8 @@ public class GameManager : NetworkBehaviour
         {
             creatDeck();
             dealOut();
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
         //uses a Lamda operator to add further methods to the OnValueChanged method
         //(I tried to edit it to prevent values from being changed outside their limits, edited them out cause i couldnt figure it out)
@@ -140,7 +223,6 @@ public class GameManager : NetworkBehaviour
     {
 
     }
-
 
     public void dealOut()
     {
@@ -190,6 +272,38 @@ public class GameManager : NetworkBehaviour
         {
             NetworkDeck.Add(deck[i]);
         }
+    }
+
+    [ClientRpc]
+    public void UpdatePlayerListClientRpc(Player[] newPlayerids)
+    {
+        playerIds.Clear();
+        playerIds.AddRange(newPlayerids);
+    }
+
+    public int getCard(bool isCardOwner, int playerNumber, int cardNumber)
+    {
+        if (isCardOwner)
+        {
+            return Hands[playerNumber, cardNumber].colorOne;
+        }
+        else
+        {
+            return Hands[playerNumber, cardNumber].colorTwo;
+        }
+    }
+
+    public int GetPlayerNumber(ulong playerId)
+    {
+        foreach (var players in playerIds)
+        {
+            if (players.Id == playerId)
+            {
+                return players.hand;
+            }
+        }
+
+        return 0;
     }
 
 }

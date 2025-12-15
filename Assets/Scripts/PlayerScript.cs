@@ -1,15 +1,32 @@
+using Unity.Netcode;
 using UnityEngine;
 
-public class PlayerScript : MonoBehaviour
+public class PlayerScript : NetworkBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    NetworkVariable<int> myHand = new NetworkVariable<int>(0,NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+    GameManager gameManager;
+
+    [SerializeField]
+    SpriteRenderer[] cardSpriteRenderers;
+
+    //0 Blue,1 Purple,2 Green, 3 Yellow, 4 Red
+    [SerializeField]
+    Sprite[] cardSprites;
+    private void Awake()
     {
-        
+        gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
+
+    }
+    private void OnNetworkInstantiate()
+    {
+        if (IsOwner)
+        {
+            myHand.Value = gameManager.GetPlayerNumber(OwnerClientId);
+        }
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
         
     }

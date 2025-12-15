@@ -17,7 +17,11 @@ public class UIJOINSCRIPT : NetworkBehaviour
     {
         NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address = inputField.text;
         NetworkManager.Singleton.StartHost();
-        if(!IsClient)NetworkManager.Singleton.SceneManager.LoadScene("CoreGame", LoadSceneMode.Single);
+
+        if (IsServer || IsHost)
+        {
+            NetworkManager.Singleton.SceneManager.LoadScene("CoreGame", LoadSceneMode.Single);
+        }
     }
     public void StartClient()
     {
