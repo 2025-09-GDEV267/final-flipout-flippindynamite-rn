@@ -1199,7 +1199,7 @@ public class GameManager : MonoBehaviour
                 break;
             }
 
-            case CardActionType.Score:
+            case CardActionType.Swipe:
             {
                 break;
             }
