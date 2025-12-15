@@ -99,7 +99,7 @@ public class GameManager : NetworkBehaviour
     {
         if (IsServer)
         {
-            creatDeck();
+            createDeck();
             dealOut();
         }
         //uses a Lamda operator to add further methods to the OnValueChanged method
@@ -168,7 +168,7 @@ public class GameManager : NetworkBehaviour
         Hands = newHands;
     }
 
-    public void creatDeck()
+    public void createDeck()
     {
         if (!IsServer) return;
 
