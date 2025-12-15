@@ -447,26 +447,43 @@ public class GameManager : MonoBehaviour
     // Called when a card is clicked - responds based on player turn, action, etc.
     void OnCardClicked(CardObject card)
     {
-        if (!IsInHighlightMode)
-           return;
-
-
-            if (cardsHighlighted.Contains(card))
-            {
-                card.HighlightCardToggle();
-                cardsHighlighted.Remove(card);
+        // If we're resolving an action, route to highlight logic
+        if (IsInHighlightMode)
+        {
+            bool consumed = HandleHighlightedCardClicked(card);
+            if (consumed)
                 return;
-            }
-            else 
-            {
-                card.HighlightCardToggle();
-                cardsHighlighted.Add(card);
-            }
+        }
+        UIManager.Instance.ToggleSelectionExternal(card);
+ 
+    }
 
-        if (cardsHighlighted.Count == GetRequiredHighlightCount(pendingAction))
+    //Handles logic revolving around highlight mode and the cardsHighlighted list.
+    bool HandleHighlightedCardClicked(CardObject card)
+    {
+        if (!IsInHighlightMode)
+            return false;
+
+        if (actionSourceCard != null && !cardsHighlighted.Contains(actionSourceCard))
+            cardsHighlighted.Add(actionSourceCard);
+
+        if (cardsHighlighted.Contains(card))
+            return true; // click was consumed
+
+        cardsHighlighted.Add(card);
+        card.HighlightCardToggle();
+
+        int required = GetRequiredHighlightCount(pendingAction);
+
+        Debug.Log($"[HighlightMode] Action: {pendingAction} | Highlighted: {cardsHighlighted.Count}/{required}");
+
+        if (cardsHighlighted.Count >= required)
         {
             ExecutePendingAction();
+            return true;
         }
+
+        return true; // click used for highlighting
     }
 
    // Called by NetworkManager when online game is ready to start (?)
@@ -1219,6 +1236,8 @@ public class GameManager : MonoBehaviour
         pendingAction = default;
         actionSourceCard = null;
     }
+
+
 
     public void FlipCardClient(int cardID, CardColor newColor)
     {

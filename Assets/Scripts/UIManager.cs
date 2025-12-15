@@ -62,14 +62,12 @@ public class UIManager : MonoBehaviour
     {
         CardObject.OnHoverEnter += CreateOutline;
         CardObject.OnHoverExit += DestroyOutline;
-        CardObject.onCardClicked += ToggleSelection;
     }
 
     private void OnDisable()
     {
         CardObject.OnHoverEnter -= CreateOutline;
         CardObject.OnHoverExit -= DestroyOutline;
-        CardObject.onCardClicked -= ToggleSelection;
     }
 
     void Update()

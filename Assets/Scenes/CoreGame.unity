@@ -349,7 +349,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   actionMenuPrefab: {fileID: 2992186066527857440, guid: cfb885197cd8351498a1f69c18343e07, type: 3}
   actionMenuOffset: {x: 3, y: 0, z: 0}
-  leftactionMenuPrefab: {fileID: 2992186066527857440, guid: 57ec9a1f328a47f4e83195d8504aecc0, type: 3}
+  leftactionMenuPrefab: {fileID: 2992186066527857440, guid: 644674e19618ab14b9aaf1e8b58e4031, type: 3}
   leftactionMenuOffset: {x: -3, y: 0, z: 0}
   frontOffset: 1000
   outlineRelativeOffset: 999
