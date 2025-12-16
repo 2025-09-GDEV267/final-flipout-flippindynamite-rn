@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: -3540168934251368906}
   - component: {fileID: 8383617058227356455}
   - component: {fileID: 9204900869388354123}
+  - component: {fileID: 7623066281836659151}
   m_Layer: 0
   m_Name: Card
   m_TagString: Untagged
@@ -131,3 +132,24 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!65 &7623066281836659151
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7452514571912191909}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 1
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.5067623, y: 2.2505493, z: 0.2}
+  m_Center: {x: 0.0033798565, y: 0, z: 0}
