@@ -1,10 +1,13 @@
+using NUnit.Framework.Interfaces;
 using Unity.Netcode;
 using UnityEngine;
 
 public class PlayerScript : NetworkBehaviour
 {
+    [SerializeField]
     NetworkVariable<int> myHand = new NetworkVariable<int>(0,NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
+    [SerializeField]
     GameManager gameManager;
 
     [SerializeField]
@@ -16,7 +19,7 @@ public class PlayerScript : NetworkBehaviour
     private void Awake()
     {
         gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
-
+        myHand.Value = new int();
     }
     private void OnNetworkInstantiate()
     {
@@ -28,6 +31,12 @@ public class PlayerScript : NetworkBehaviour
 
     private void Update()
     {
-        
+        if (gameManager != null)
+        {
+            for (int i = 0; i < cardSpriteRenderers.Length; i++)
+            {
+                cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(IsOwner, myHand.Value, i)];
+            }
+        }
     }
 }

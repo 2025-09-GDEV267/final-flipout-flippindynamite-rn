@@ -32,6 +32,11 @@ public class GameManager : NetworkBehaviour
         NetworkDeck = new NetworkList<Card>();
         NetworkDiscard = new NetworkList<Card>();
         instance = this;
+        if (IsServer)
+        {
+            createDeck();
+            dealOut();
+        }
         DontDestroyOnLoad(gameObject);
     }
 
@@ -54,7 +59,7 @@ public class GameManager : NetworkBehaviour
 
         newPlayer.Id = clientId;
 
-        newPlayer.hand = playerIds.Count;
+        newPlayer.hand = playerIds.Count - 1;
 
         playerIds.Add(newPlayer);
 
@@ -65,6 +70,8 @@ public class GameManager : NetworkBehaviour
 
         // Update all clients with the player list
         UpdatePlayerListClientRpc(playerIds.ToArray());
+
+        GetHandsclientRpc(Hands);
     }
 
     private void OnClientDisconnected(ulong clientId)
@@ -179,9 +186,7 @@ public class GameManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         if (IsServer)
-        {
-            createDeck();
-            dealOut();
+        {            
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
@@ -229,6 +234,7 @@ public class GameManager : NetworkBehaviour
         for (int i = 0; i < Hands.GetLength(0); i++)
         {
             string debug = "";
+
             for (int j = 0; j < Hands.GetLength(1); j++)
             {
                 int rand = UnityEngine.Random.Range(0, NetworkDeck.Count);
@@ -252,7 +258,7 @@ public class GameManager : NetworkBehaviour
 
     public void createDeck()
     {
-        if (!IsServer) return;
+        if (!IsServer || !IsHost) return;
 
         int index = 0;
 
