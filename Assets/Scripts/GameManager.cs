@@ -1203,6 +1203,22 @@ public class GameManager : MonoBehaviour
             
             case CardActionType.Swap1:
             {
+                
+                CardObject cardA = cardsHighlighted[0];
+                CardObject cardB = cardsHighlighted[1];
+
+                int playerAID = cardA.cardPOD.ownerPlayerID;
+                int playerBID = cardB.cardPOD.ownerPlayerID;
+
+                // Decide color behavior
+                CardColor newColorA = FakeFlipColor(cardA.cardPOD.color);
+                CardColor newColorB = FakeFlipColor(cardB.cardPOD.color);
+
+                GameManager.Instance.SwapCards1Client(playerAID, playerBID, cardA.cardPOD.cardID, cardB.cardPOD.cardID, newColorA,newColorB);
+
+                Debug.Log(
+                    $"[Action] Swap1 executed: {cardA.name} <-> {cardB.name}"
+                );
                 break;
             }
 
