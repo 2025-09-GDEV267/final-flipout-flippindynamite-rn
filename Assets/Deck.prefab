@@ -9,8 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4641867687464583861}
-  - component: {fileID: 4203788867769758444}
   - component: {fileID: -5715737298383757975}
+  - component: {fileID: 4203788867769758444}
   m_Layer: 0
   m_Name: Deck
   m_TagString: Untagged
@@ -33,20 +33,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4203788867769758444
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2294879869998939169}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 74f6dc740e288f44080a5a9699cb2557, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  cardPrefab: {fileID: 7452514571912191909, guid: c31a2ec32e4dc784ba0dc89a3eaee57e, type: 3}
-  cards: []
 --- !u!114 &-5715737298383757975
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -72,3 +58,18 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
+--- !u!114 &4203788867769758444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2294879869998939169}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74f6dc740e288f44080a5a9699cb2557, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  cardPrefab: {fileID: 7452514571912191909, guid: c31a2ec32e4dc784ba0dc89a3eaee57e, type: 3}
+  cards: []

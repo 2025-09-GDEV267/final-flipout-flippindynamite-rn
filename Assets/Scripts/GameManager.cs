@@ -220,7 +220,7 @@ public class GameManager : NetworkBehaviour
     void Update()
     {
         // Only the server can do anything in Update else return;
-        if (!IsServer) return;
+        if (IsServer && !IsHost) return;
     }
     //Updates the NetWorkValue randomValues 
     private void updateValues()
@@ -246,7 +246,27 @@ public class GameManager : NetworkBehaviour
 
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void flipServerRpc(int playerNumber, int cardNumber)
+    {
+        if (true /* I'll add some logic like turn order or whatever here*/)
+        {
+            var c = Hands[Index(playerNumber, cardNumber)];
 
+            if (c.ColorVisibleToOwner == 0)
+            {
+                c.ColorVisibleToOwner = 1;
+            }
+            else
+            {
+                c.ColorVisibleToOwner = 0;
+            }
+
+            Hands[Index(playerNumber, cardNumber)] = c;
+
+            updateValues();
+        }
+    }
     public void createDeck()
     {
         if (!IsServer || !IsHost) return;

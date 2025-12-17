@@ -33,6 +33,18 @@ public class PlayerScript : NetworkBehaviour
         transform.position = new Vector3(0, 3.25f, 0);
     }
 
+    public void Flip(SpriteRenderer cardSprite)
+    {
+        for (int i = 0; i < cardSpriteRenderers.Length; i++)
+        {
+                if (cardSprite.Equals(cardSpriteRenderers[i]))
+                {
+                    gameManager.flipServerRpc(myHand.Value, i);
+                }
+        }
+    }
+
+
     private void Update()
     {
         if (gameManager == null) return;
