@@ -1,4 +1,6 @@
+using NUnit.Framework;
 using NUnit.Framework.Interfaces;
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -56,26 +58,39 @@ public class PlayerScript : NetworkBehaviour
             {
                 cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(true, myHand.Value, i)];
             }
+
+            //////////////////////////////////////////////////////////////
+
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+
+            List<GameObject> dummyArray = new List<GameObject>();
+
+            foreach (GameObject player in players)
+            {
+                if (!(player.Equals(gameObject)))
+                {
+                    dummyArray.Add(player);
+                }
+            }
+
+            players = dummyArray.ToArray();
+
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (!(players[i].Equals(gameObject)))
+                {
+                    setPos(i + 1, players[i].transform);
+                }            
+            }
         }
 
         if (!IsOwner)
         {
-
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-
-            for (int i = 0; i < players.Length; i++)
-            {
-                if (players[i] != gameObject) setPos(i, players[i].transform);
-            }
-
-            transform.localScale = new Vector3(0.75f, 0.75f, 1);
-            
             for (int i = 0; i < cardSpriteRenderers.Length; i++)
             {
                 cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(false, myHand.Value, i)];
             }
         }
-
     }
 
     public void setPos(int mySpot, Transform gameOBJ)
@@ -92,5 +107,6 @@ public class PlayerScript : NetworkBehaviour
                 gameOBJ.position = new Vector3(-5.25f, 0.75f, 0);
                 break;
         };
+        gameOBJ.transform.localScale = new Vector3(0.75f, 0.75f, 1);
     }
 }
