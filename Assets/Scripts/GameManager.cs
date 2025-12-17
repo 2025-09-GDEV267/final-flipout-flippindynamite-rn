@@ -8,16 +8,17 @@ public class GameManager : NetworkBehaviour
 
     public NetworkVariable<ulong> whosTurn;
 
-    List<Player> playerIds = new List<Player>();
+    public NetworkVariable<int> playerCount;
+
+    public NetworkList<Player> playerIds = new NetworkList<Player>(new Player[4],NetworkVariableReadPermission.Everyone,NetworkVariableWritePermission.Server);
 
     public NetworkList<Card> NetworkDeck;
 
     public NetworkList<Card> NetworkDiscard;
 
-    public NetworkList<Card> Hands = new NetworkList<Card>(new Card[24],NetworkVariableReadPermission.Everyone,NetworkVariableWritePermission.Server);
+    public NetworkList<Card> Hands = new NetworkList<Card>(new Card[24], NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     const int CardsPerPlayer = 6;
-
 
     // Establishes a Singleton
     public static GameManager instance;
@@ -33,7 +34,7 @@ public class GameManager : NetworkBehaviour
 
         NetworkDeck = new NetworkList<Card>();
         NetworkDiscard = new NetworkList<Card>();
-       
+
 
         DontDestroyOnLoad(gameObject);
     }
@@ -57,17 +58,16 @@ public class GameManager : NetworkBehaviour
 
         newPlayer.Id = clientId;
 
-        newPlayer.hand = playerIds.Count;
+        newPlayer.hand = playerCount.Value;
 
         playerIds.Add(newPlayer);
+
+        playerCount.Value++;
 
         if (whosTurn.Value == ulong.MaxValue)
         {
             whosTurn.Value = clientId;
         }
-
-        // Update all clients with the player list
-        UpdatePlayerListClientRpc(playerIds.ToArray());
     }
 
     private void OnClientDisconnected(ulong clientId)
@@ -86,15 +86,14 @@ public class GameManager : NetworkBehaviour
 
         playerIds.Remove(player);
 
+        playerCount.Value--;
+
         // If the disconnected player was the current turn holder
         if (whosTurn.Value == clientId && playerIds.Count > 0)
         {
             int nextIndex = 0; // Or implement your turn order logic
             whosTurn.Value = playerIds[nextIndex].Id;
         }
-
-        // Update player list
-        UpdatePlayerListClientRpc(playerIds.ToArray());
     }
 
     //Makes a new NetworkVarible of type Card (see def) called randomValues and then sets the read perms to everyone and the writing perms to only the server
@@ -183,9 +182,11 @@ public class GameManager : NetworkBehaviour
     {
         if (IsServer)
         {
-           createDeck();
-           dealOut();
-            
+            createDeck();
+            dealOut();
+
+            playerCount.Value = 0;
+
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
@@ -216,12 +217,7 @@ public class GameManager : NetworkBehaviour
     //create this bool to control the rate at which invoke is called 
     public bool latch = false;
 
-    // Update is called once per frame
-    void Update()
-    {
-        // Only the server can do anything in Update else return;
-        if (IsServer && !IsHost) return;
-    }
+   
     //Updates the NetWorkValue randomValues 
     private void updateValues()
     {
@@ -275,13 +271,6 @@ public class GameManager : NetworkBehaviour
         {
             NetworkDeck.Add(deckCardRange[i % deckCardRange.Length]);
         }
-    }
-
-    [ClientRpc]
-    public void UpdatePlayerListClientRpc(Player[] newPlayerids)
-    {
-        playerIds.Clear();
-        playerIds.AddRange(newPlayerids);
     }
 
     public int getCard(bool isCardOwner, int playerNumber, int cardNumber)

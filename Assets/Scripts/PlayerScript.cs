@@ -25,12 +25,8 @@ public class PlayerScript : NetworkBehaviour
     {
         if (IsOwner)
         {
-
-            transform.position = new Vector3(0, -3.25f, 0);
-            return;
+            myHand.Value = gameManager.GetPlayerNumber(OwnerClientId);
         }
-
-        transform.position = new Vector3(0, 3.25f, 0);
     }
 
     public void Flip(SpriteRenderer cardSprite)
@@ -53,19 +49,48 @@ public class PlayerScript : NetworkBehaviour
         if (IsOwner)
         {
             myHand.Value = gameManager.GetPlayerNumber(OwnerClientId);
-            
+
+            transform.position = new Vector3(0, -3.25f, 0);
+
             for (int i = 0; i < cardSpriteRenderers.Length; i++)
             {
                 cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(true, myHand.Value, i)];
             }
-            return;
         }
 
-        for (int i = 0; i < cardSpriteRenderers.Length; i++)
+        if (!IsOwner)
         {
-            cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(false, myHand.Value, i)];
+
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (players[i] != gameObject) setPos(i, players[i].transform);
+            }
+
+            transform.localScale = new Vector3(0.75f, 0.75f, 1);
+            
+            for (int i = 0; i < cardSpriteRenderers.Length; i++)
+            {
+                cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(false, myHand.Value, i)];
+            }
         }
 
+    }
 
+    public void setPos(int mySpot, Transform gameOBJ)
+    {
+        switch (mySpot)
+        {
+            case 1:
+                gameOBJ.position = new Vector3(5.25f, 0.75f, 0f);
+                break;
+            case 2:
+                gameOBJ.position = new Vector3(0, 3.25f, 0);
+                break;
+            case 3:
+                gameOBJ.position = new Vector3(-5.25f, 0.75f, 0);
+                break;
+        };
     }
 }
