@@ -19,24 +19,41 @@ public class PlayerScript : NetworkBehaviour
     private void Awake()
     {
         gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
-        myHand.Value = new int();
+        
     }
-    private void OnNetworkInstantiate()
+    public override void OnNetworkSpawn()
     {
         if (IsOwner)
         {
-            myHand.Value = gameManager.GetPlayerNumber(OwnerClientId);
+
+            transform.position = new Vector3(0, -3.25f, 0);
+            return;
         }
+
+        transform.position = new Vector3(0, 3.25f, 0);
     }
 
     private void Update()
     {
-        if (gameManager != null)
+        if (gameManager == null) return;
+        if (gameManager.Hands == null || gameManager.Hands.Count == 0) return;
+
+        if (IsOwner)
         {
+            myHand.Value = gameManager.GetPlayerNumber(OwnerClientId);
+            
             for (int i = 0; i < cardSpriteRenderers.Length; i++)
             {
-                cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(IsOwner, myHand.Value, i)];
+                cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(true, myHand.Value, i)];
             }
+            return;
         }
+
+        for (int i = 0; i < cardSpriteRenderers.Length; i++)
+        {
+            cardSpriteRenderers[i].sprite = cardSprites[gameManager.getCard(false, myHand.Value, i)];
+        }
+
+
     }
 }

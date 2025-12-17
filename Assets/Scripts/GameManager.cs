@@ -14,8 +14,10 @@ public class GameManager : NetworkBehaviour
 
     public NetworkList<Card> NetworkDiscard;
 
-    [SerializeField]
-    public Card[,] Hands = new Card[4,6];
+    public NetworkList<Card> Hands = new NetworkList<Card>(new Card[24],NetworkVariableReadPermission.Everyone,NetworkVariableWritePermission.Server);
+
+    const int CardsPerPlayer = 6;
+
 
     // Establishes a Singleton
     public static GameManager instance;
@@ -31,12 +33,8 @@ public class GameManager : NetworkBehaviour
 
         NetworkDeck = new NetworkList<Card>();
         NetworkDiscard = new NetworkList<Card>();
-        instance = this;
-        if (IsServer)
-        {
-            createDeck();
-            dealOut();
-        }
+       
+
         DontDestroyOnLoad(gameObject);
     }
 
@@ -59,7 +57,7 @@ public class GameManager : NetworkBehaviour
 
         newPlayer.Id = clientId;
 
-        newPlayer.hand = playerIds.Count - 1;
+        newPlayer.hand = playerIds.Count;
 
         playerIds.Add(newPlayer);
 
@@ -70,8 +68,6 @@ public class GameManager : NetworkBehaviour
 
         // Update all clients with the player list
         UpdatePlayerListClientRpc(playerIds.ToArray());
-
-        GetHandsclientRpc(Hands);
     }
 
     private void OnClientDisconnected(ulong clientId)
@@ -186,7 +182,10 @@ public class GameManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         if (IsServer)
-        {            
+        {
+           createDeck();
+           dealOut();
+            
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
@@ -231,52 +230,30 @@ public class GameManager : NetworkBehaviour
 
     public void dealOut()
     {
-        for (int i = 0; i < Hands.GetLength(0); i++)
-        {
-            string debug = "";
+        if (!IsServer) return;
 
-            for (int j = 0; j < Hands.GetLength(1); j++)
+        for (int player = 0; player < 4; player++)
+        {
+            for (int card = 0; card < CardsPerPlayer; card++)
             {
                 int rand = UnityEngine.Random.Range(0, NetworkDeck.Count);
-                Hands[i, j] = NetworkDeck[rand];
+                Hands[Index(player, card)] = NetworkDeck[rand];
                 NetworkDiscard.Add(NetworkDeck[rand]);
-                NetworkDeck.Remove(NetworkDeck[rand]);
-
-                debug += " " + Hands[i,j].colorOne;
+                NetworkDeck.RemoveAt(rand);
             }
-
-            Debug.Log("Hand: " + i + " = { " + debug + " }");
         }
-        GetHandsclientRpc(Hands);
+
+
     }
 
-    [ClientRpc]
-    public void GetHandsclientRpc(Card[,] newHands)
-    {
-        Hands = newHands;
-    }
 
     public void createDeck()
     {
         if (!IsServer || !IsHost) return;
 
-        int index = 0;
-
-        Card[] deck = new Card[90];
-
-        for (int i = 0; i < deckCardRange.Length; i++)
+        for (int i = 0; i < 90; i++)
         {
-            for (int j = 0; j < 6; j++)
-            {
-                deck[i * 6 + j] = deckCardRange[index];
-                index++;
-                if (index == deckCardRange.Length) index = 0;
-            }
-        }
-
-        for (int i = 0; i < deck.Length; i++)
-        {
-            NetworkDeck.Add(deck[i]);
+            NetworkDeck.Add(deckCardRange[i % deckCardRange.Length]);
         }
     }
 
@@ -289,14 +266,35 @@ public class GameManager : NetworkBehaviour
 
     public int getCard(bool isCardOwner, int playerNumber, int cardNumber)
     {
-        if (isCardOwner)
+        var c = Hands[Index(playerNumber, cardNumber)];
+
+        if (IsOwner)
         {
-            return Hands[playerNumber, cardNumber].colorOne;
+            if (c.ColorVisibleToOwner == 0)
+            {
+                return c.colorOne;
+            }
+            else
+            {
+                return c.colorTwo;
+            }
         }
         else
         {
-            return Hands[playerNumber, cardNumber].colorTwo;
+            if (c.ColorVisibleToOwner == 0)
+            {
+                return c.colorTwo;
+            }
+            else
+            {
+                return c.colorOne;
+            }
         }
+    }
+
+    int Index(int player, int card)
+    {
+        return player * CardsPerPlayer + card;
     }
 
     public int GetPlayerNumber(ulong playerId)
